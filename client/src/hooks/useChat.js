@@ -463,6 +463,10 @@ export function useP2PCall(socket, username) {
       endCall();
     });
 
+    socket.on('call:busy', (data) => {
+      endCall();
+    });
+
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
       endCall();
@@ -474,6 +478,7 @@ export function useP2PCall(socket, username) {
       socket.off('call:rejected');
       socket.off('call:ended');
       socket.off('call:cancelled');
+      socket.off('call:busy');
       socket.off('call:ice-candidate');
       socket.off('call:error');
     };

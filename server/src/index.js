@@ -232,15 +232,8 @@ io.on('connection', (socket) => {
       return;
     }
     if (activeCalls.has(data.targetUsername)) {
-      const targetCall = activeCalls.get(data.targetUsername);
-      if (targetCall.peer === callerUsername) {
-        const targetSocketId = targetSockets.values().next().value;
-        io.to(targetSocketId).emit('call:cancelled', { username: callerUsername });
-        activeCalls.delete(data.targetUsername);
-      } else {
-        socket.emit('call:error', { message: 'Пользователь уже в звонке' });
-        return;
-      }
+      socket.emit('call:busy', { username: data.targetUsername });
+      return;
     }
     activeCalls.set(callerUsername, { peer: data.targetUsername, role: 'caller' });
     const targetSocketId = targetSockets.values().next().value;
