@@ -120,7 +120,7 @@ export default function Home() {
         </button>
       </div>
       {sidebarTab === 'users' ? (
-        <UserList users={users} username={user.username} onCall={initiateCall} />
+        <UserList users={users} username={user.username} onCall={(u) => initiateCall(u, false)} onVideoCall={(u) => initiateCall(u, true)} />
       ) : (
         <GroupList
           groups={groups}
@@ -190,7 +190,7 @@ export default function Home() {
           remoteUsername={callRemoteUsername}
           localStream={localStream}
           remoteStream={remoteStream}
-          onAccept={() => acceptCall(incomingCall)}
+          onAccept={(data, withVideo) => acceptCall(data, withVideo)}
           onReject={() => rejectCall(incomingCall)}
           onEnd={() => {
             socket.emit('call:end', { targetSocketId: callerSocketId.current });

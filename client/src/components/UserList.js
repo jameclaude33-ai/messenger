@@ -1,4 +1,4 @@
-export default function UserList({ users, username, onCall }) {
+export default function UserList({ users, username, onCall, onVideoCall }) {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -19,14 +19,19 @@ export default function UserList({ users, username, onCall }) {
               {user.username}
               {user.username === username && ' (вы)'}
             </span>
-            {user.username !== username && onCall && (
-              <button
-                onClick={() => onCall(user.username)}
-                style={styles.callBtn}
-                title="Позвонить"
-              >
-                📞
-              </button>
+            {user.username !== username && (
+              <div style={styles.actions}>
+                {onCall && (
+                  <button onClick={() => onCall(user.username)} style={styles.callBtn} title="Аудио звонок">
+                    📞
+                  </button>
+                )}
+                {onVideoCall && (
+                  <button onClick={() => onVideoCall(user.username)} style={styles.callBtn} title="Видео звонок">
+                    📹
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ))}
@@ -88,6 +93,10 @@ const styles = {
     fontSize: '14px',
     flex: 1,
   },
+  actions: {
+    display: 'flex',
+    gap: '4px',
+  },
   callBtn: {
     background: 'none',
     border: 'none',
@@ -95,6 +104,5 @@ const styles = {
     fontSize: '16px',
     padding: '4px',
     borderRadius: '4px',
-    transition: 'background 0.2s',
   },
 };

@@ -358,10 +358,10 @@ export function useP2PCall(socket, username) {
     pendingCandidates.current = [];
   }, [socket]);
 
-  const initiateCall = async (targetUsername) => {
+  const initiateCall = async (targetUsername, withVideo = false) => {
     const callId = ++callIdRef.current;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
       if (callId !== callIdRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
@@ -392,14 +392,14 @@ export function useP2PCall(socket, username) {
     }
   };
 
-  const acceptCall = async (data) => {
+  const acceptCall = async (data, withVideo = false) => {
     const callId = ++callIdRef.current;
     try {
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
         callTimeoutRef.current = null;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: withVideo });
       if (callId !== callIdRef.current) {
         stream.getTracks().forEach((t) => t.stop());
         return;
