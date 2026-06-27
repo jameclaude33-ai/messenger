@@ -306,21 +306,21 @@ io.on('connection', (socket) => {
       const sockets = userSockets.get(username);
       if (sockets) {
         sockets.delete(socket.id);
+        if (activeCalls.has(username)) {
+          const call = activeCalls.get(username);
+          activeCalls.delete(username);
+          activeCalls.delete(call.peer);
+          const peerSockets = userSockets.get(call.peer);
+          if (peerSockets) {
+            peerSockets.forEach((sid) => {
+              io.to(sid).emit('call:ended', { username });
+            });
+          }
+        }
         if (sockets.size === 0) {
           userSockets.delete(username);
           users.delete(username);
           userModel.setOffline(username);
-          if (activeCalls.has(username)) {
-            const call = activeCalls.get(username);
-            activeCalls.delete(username);
-            activeCalls.delete(call.peer);
-            const peerSockets = userSockets.get(call.peer);
-            if (peerSockets) {
-              peerSockets.forEach((sid) => {
-                io.to(sid).emit('call:ended', { username });
-              });
-            }
-          }
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
           io.emit('message:new', {
