@@ -6,5 +6,13 @@
   "background_color": "#0f0f0f",
   "theme_color": "#0f0f0f",
   "orientation": "portrait",
-  "icons": []
+  "gcm_sender_id": "",
+  "permissions": ["notifications"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
 }

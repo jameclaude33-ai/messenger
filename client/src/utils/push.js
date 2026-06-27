@@ -13,10 +13,13 @@ function urlBase64ToUint8Array(base64String) {
 
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.log('Push not supported');
     return null;
   }
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js');
+    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+    console.log('Service Worker registered:', registration.scope);
     return registration;
   } catch (err) {
     console.error('Service Worker registration failed:', err);
@@ -25,28 +28,48 @@ async function registerServiceWorker() {
 }
 
 async function subscribeToPush(token) {
-  const registration = await registerServiceWorker();
-  if (!registration) return false;
-
   try {
+    const registration = await registerServiceWorker();
+    if (!registration) {
+      console.log('No service worker registration');
+      return false;
+    }
+
     const res = await fetch(`${API_URL}/api/push/vapid-key`);
+    if (!res.ok) {
+      console.error('Failed to fetch VAPID key:', res.status);
+      return false;
+    }
     const { publicKey } = await res.json();
+    console.log('VAPID key fetched');
 
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      console.log('Push subscription created');
+    } else {
+      console.log('Push subscription already exists');
+    }
 
-    await fetch(`${API_URL}/api/push/subscribe`, {
+    const subRes = await fetch(`${API_URL}/api/push/subscribe`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ subscription }),
+      body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
 
-    return true;
+    if (subRes.ok) {
+      console.log('Push subscription sent to server');
+      return true;
+    } else {
+      console.error('Failed to send subscription to server:', subRes.status);
+      return false;
+    }
   } catch (err) {
     console.error('Push subscription failed:', err);
     return false;
@@ -66,7 +89,7 @@ async function unsubscribeFromPush(token) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ subscription }),
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
       });
     }
   } catch (err) {
@@ -75,9 +98,13 @@ async function unsubscribeFromPush(token) {
 }
 
 async function requestNotificationPermission() {
-  if (!('Notification' in window)) return false;
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
+    return false;
+  }
   if (Notification.permission === 'granted') return true;
   const result = await Notification.requestPermission();
+  console.log('Notification permission:', result);
   return result === 'granted';
 }
 
