@@ -232,8 +232,17 @@ io.on('connection', (socket) => {
       return;
     }
     if (activeCalls.has(data.targetUsername)) {
-      socket.emit('call:busy', { username: data.targetUsername });
-      return;
+      const existingCall = activeCalls.get(data.targetUsername);
+      if (existingCall.peer === callerUsername) {
+        activeCalls.delete(data.targetUsername);
+        const peerSockets = userSockets.get(data.targetUsername);
+        if (peerSockets) {
+          peerSockets.forEach((sid) => io.to(sid).emit('call:ended', { username: callerUsername }));
+        }
+      } else {
+        socket.emit('call:busy', { username: data.targetUsername });
+        return;
+      }
     }
     activeCalls.set(callerUsername, { peer: data.targetUsername, role: 'caller' });
     const targetSocketId = targetSockets.values().next().value;

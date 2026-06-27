@@ -464,11 +464,15 @@ export function useP2PCall(socket, username) {
     });
 
     socket.on('call:busy', (data) => {
+      socket.emit('call:end', {});
       endCall();
     });
 
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
+      if (callerSocketId.current) {
+        socket.emit('call:end', { targetSocketId: callerSocketId.current });
+      }
       endCall();
     });
 
