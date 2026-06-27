@@ -304,7 +304,7 @@ export function useGroups(socket) {
 }
 
 export function useP2PCall(socket, username) {
-  const [callState, setCallState] = useState('idle');
+  const [callState, setCallStateRaw] = useState('idle');
   const [remoteUsername, setRemoteUsername] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -314,6 +314,12 @@ export function useP2PCall(socket, username) {
   const localStreamRef = useRef(null);
   const callTimeoutRef = useRef(null);
   const callIdRef = useRef(0);
+  const callStateRef = useRef('idle');
+
+  const setCallState = useCallback((val) => {
+    callStateRef.current = val;
+    setCallStateRaw(val);
+  }, []);
 
   const iceServers = {
     iceServers: [
@@ -457,7 +463,7 @@ export function useP2PCall(socket, username) {
     if (!socket) return;
 
     socket.on('call:incoming', (data) => {
-      if (callState === 'calling') {
+      if (callStateRef.current === 'calling') {
         const callId = ++callIdRef.current;
         if (callTimeoutRef.current) {
           clearTimeout(callTimeoutRef.current);
@@ -505,7 +511,7 @@ export function useP2PCall(socket, username) {
         })();
         return;
       }
-      if (callState !== 'idle') {
+      if (callStateRef.current !== 'idle') {
         if (callerSocketId.current) {
           socket.emit('call:end', { targetSocketId: callerSocketId.current });
         }
@@ -579,7 +585,7 @@ export function useP2PCall(socket, username) {
       socket.off('call:ice-candidate');
       socket.off('call:error');
     };
-  }, [socket, localStream]);
+  }, [socket]);
 
   return {
     callState,
