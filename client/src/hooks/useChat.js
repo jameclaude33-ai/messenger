@@ -46,14 +46,7 @@ export function useAuth() {
     });
   }, [token]);
 
-  const register = async (username, password) => {
-    const res = await fetch(`${API_URL}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error);
+  const register = async (data) => {
     localStorage.setItem('messenger_token', data.token);
     localStorage.setItem('messenger_user', JSON.stringify(data.user));
     setToken(data.token);
