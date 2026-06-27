@@ -1,0 +1,192 @@
+import { useState, useRef, useEffect } from 'react';
+
+export default function PrivateChat({ messages, username, onSend, onBack, otherUser, decryptMessage }) {
+  const [text, setText] = useState('');
+  const [decryptedMessages, setDecryptedMessages] = useState([]);
+  const listRef = useRef(null);
+
+  useEffect(() => {
+    if (!decryptMessage || !messages.length) {
+      setDecryptedMessages(messages);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(messages.map(decryptMessage));
+      if (!cancelled) setDecryptedMessages(results);
+    })();
+    return () => { cancelled = true; };
+  }, [messages, decryptMessage]);
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [decryptedMessages]);
+
+  const handleSend = () => {
+    if (!text.trim()) return;
+    onSend(text);
+    setText('');
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <button onClick={onBack} style={styles.backBtn}>←</button>
+        <div style={styles.avatar}>{otherUser[0].toUpperCase()}</div>
+        <div>
+          <div style={styles.name}>{otherUser}</div>
+          <div style={styles.e2e}>🔒 E2E</div>
+        </div>
+      </div>
+
+      <div style={styles.messages} ref={listRef}>
+        {decryptedMessages.length === 0 && (
+          <p style={styles.empty}>Начните диалог с {otherUser}</p>
+        )}
+        {decryptedMessages.map((msg) => {
+          const isOwn = msg.from === username;
+          return (
+            <div key={msg.id} style={{ ...styles.bubble, alignSelf: isOwn ? 'flex-end' : 'flex-start', background: isOwn ? '#4f46e5' : '#1a1a1a' }}>
+              <p style={styles.text}>{msg.text}</p>
+              <span style={styles.time}>
+                {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={styles.inputArea}>
+        <input
+          style={styles.input}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Сообщение..."
+        />
+        <button onClick={handleSend} style={styles.sendBtn}>↑</button>
+      </div>
+    </div>
+  );
+}
+
+const styles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    background: '#0f0f0f',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '12px 16px',
+    background: '#1a1a1a',
+    borderBottom: '1px solid #2a2a2a',
+    flexShrink: 0,
+  },
+  backBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#fff',
+    fontSize: '20px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+  },
+  avatar: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    background: '#333',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#888',
+  },
+  name: {
+    color: '#fff',
+    fontSize: '15px',
+    fontWeight: '600',
+  },
+  e2e: {
+    color: '#22c55e',
+    fontSize: '11px',
+  },
+  messages: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  empty: {
+    color: '#666',
+    fontSize: '13px',
+    textAlign: 'center',
+    margin: 'auto',
+  },
+  bubble: {
+    maxWidth: '75%',
+    padding: '10px 14px',
+    borderRadius: '16px',
+    borderBottomRightRadius: '4px',
+  },
+  text: {
+    color: '#fff',
+    fontSize: '14px',
+    margin: 0,
+    lineHeight: '20px',
+    wordBreak: 'break-word',
+  },
+  time: {
+    color: '#888',
+    fontSize: '10px',
+    display: 'block',
+    textAlign: 'right',
+    marginTop: '4px',
+  },
+  inputArea: {
+    display: 'flex',
+    gap: '8px',
+    padding: '12px 16px',
+    background: '#1a1a1a',
+    borderTop: '1px solid #2a2a2a',
+    flexShrink: 0,
+  },
+  input: {
+    flex: 1,
+    background: '#0f0f0f',
+    border: '1px solid #333',
+    borderRadius: '20px',
+    padding: '10px 16px',
+    color: '#fff',
+    fontSize: '14px',
+    outline: 'none',
+  },
+  sendBtn: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    background: '#4f46e5',
+    border: 'none',
+    color: '#fff',
+    fontSize: '18px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+};

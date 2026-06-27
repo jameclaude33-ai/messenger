@@ -14,6 +14,7 @@ const pushRouter = require('./routes/push');
 const { verifyToken } = require('./middleware/auth');
 const userModel = require('./models/user');
 const keystore = require('./models/keystore');
+const privateMsg = require('./models/privateMessage');
 const push = require('./utils/push');
 
 require('dotenv').config();
@@ -93,6 +94,46 @@ io.on('connection', (socket) => {
 
   socket.on('user:list', () => {
     socket.emit('user:list', Array.from(users.values()));
+  });
+
+  // Private messages
+  socket.on('private:send', (data) => {
+    const sender = socketToUser.get(socket.id);
+    if (!sender || !data.to) return;
+    const message = privateMsg.savePrivateMessage(sender, data.to, {
+      encrypted: data.encrypted,
+      ciphertext: data.ciphertext,
+      iv: data.iv,
+      text: data.text,
+    });
+    const targetSockets = userSockets.get(data.to);
+    if (targetSockets) {
+      targetSockets.forEach((sid) => {
+        io.to(sid).emit('private:message', message);
+      });
+    }
+    socket.emit('private:message', message);
+    if (!users.has(data.to)) {
+      push.sendPushNotification(data.to, {
+        title: sender,
+        body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
+      }).catch(() => {});
+    }
+  });
+
+  socket.on('private:history', (data) => {
+    const username = socketToUser.get(socket.id);
+    if (!username || !data.with) return;
+    const messages = privateMsg.getPrivateMessages(username, data.with);
+    socket.emit('private:history', messages);
+    privateMsg.markAsRead(data.with, username, username);
+  });
+
+  socket.on('private:chats', () => {
+    const username = socketToUser.get(socket.id);
+    if (!username) return;
+    const chats = privateMsg.getChatsForUser(username);
+    socket.emit('private:chats', chats);
   });
 
   socket.on('message:send', async (data) => {

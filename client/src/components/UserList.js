@@ -1,4 +1,4 @@
-export default function UserList({ users, username, onCall, onVideoCall }) {
+export default function UserList({ users, username, onCall, onVideoCall, onChat }) {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -21,6 +21,11 @@ export default function UserList({ users, username, onCall, onVideoCall }) {
             </span>
             {user.username !== username && (
               <div style={styles.actions}>
+                {onChat && (
+                  <button onClick={() => onChat(user.username)} style={styles.callBtn} title="Написать">
+                    💬
+                  </button>
+                )}
                 {onCall && (
                   <button onClick={() => onCall(user.username)} style={styles.callBtn} title="Аудио звонок">
                     📞

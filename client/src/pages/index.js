@@ -1,9 +1,12 @@
 import GlobalStyles from '../styles/global';
 import { useAuth, useSocket, useE2E, useChat, useGroups, useP2PCall } from '../hooks/useChat';
+import { usePrivateChats } from '../hooks/usePrivateChat';
 import AuthScreen from '../components/AuthScreen';
 import ChatHeader from '../components/ChatHeader';
 import UserList from '../components/UserList';
 import GroupList from '../components/GroupList';
+import ChatList from '../components/ChatList';
+import PrivateChat from '../components/PrivateChat';
 import GroupChat from '../components/GroupChat';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
@@ -27,6 +30,15 @@ export default function Home() {
     deselectGroup,
   } = useGroups(socket);
   const {
+    chats,
+    activeChat,
+    messages: privateMessages,
+    openChat,
+    closeChat,
+    sendPrivateMessage,
+    decryptMessage: decryptPrivateMessage,
+  } = usePrivateChats(socket, e2eKeyPair, e2eReady, token);
+  const {
     callState,
     remoteUsername: callRemoteUsername,
     localStream,
@@ -37,7 +49,7 @@ export default function Home() {
     endCall,
     callerSocketId,
   } = useP2PCall(socket, user?.username);
-  const [sidebarTab, setSidebarTab] = useState('users');
+  const [sidebarTab, setSidebarTab] = useState('chats');
   const [showSidebar, setShowSidebar] = useState(true);
   const [incomingCall, setIncomingCall] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -72,6 +84,11 @@ export default function Home() {
 
   const toggleSidebar = useCallback(() => setShowSidebar(v => !v), []);
 
+  const handleOpenChat = useCallback((username) => {
+    openChat(username);
+    if (isMobile) setShowSidebar(false);
+  }, [openChat, isMobile]);
+
   const handleSelectGroup = useCallback((id) => {
     selectGroup(id);
     if (isMobile) setShowSidebar(false);
@@ -99,6 +116,16 @@ export default function Home() {
     <div style={styles.sidebarInner}>
       <div style={styles.tabs}>
         <button
+          onClick={() => setSidebarTab('chats')}
+          style={{
+            ...styles.tab,
+            borderBottom: sidebarTab === 'chats' ? '2px solid #4f46e5' : '2px solid transparent',
+            color: sidebarTab === 'chats' ? '#fff' : '#666',
+          }}
+        >
+          Чаты
+        </button>
+        <button
           onClick={() => setSidebarTab('users')}
           style={{
             ...styles.tab,
@@ -106,7 +133,7 @@ export default function Home() {
             color: sidebarTab === 'users' ? '#fff' : '#666',
           }}
         >
-          Чаты
+          Люди
         </button>
         <button
           onClick={() => setSidebarTab('groups')}
@@ -119,19 +146,50 @@ export default function Home() {
           Группы
         </button>
       </div>
-      {sidebarTab === 'users' ? (
-        <UserList users={users} username={user.username} onCall={(u) => initiateCall(u, false)} onVideoCall={(u) => initiateCall(u, true)} />
-      ) : (
-        <GroupList
-          groups={groups}
-          onJoin={joinGroup}
-          onCreate={createGroup}
-          activeGroupId={activeGroupId}
-          onSelect={handleSelectGroup}
-        />
+      {sidebarTab === 'chats' && (
+        <ChatList chats={chats} activeChat={activeChat} onSelect={handleOpenChat} username={user.username} />
+      )}
+      {sidebarTab === 'users' && (
+        <UserList users={users} username={user.username} onCall={(u) => initiateCall(u, false)} onVideoCall={(u) => initiateCall(u, true)} onChat={handleOpenChat} />
+      )}
+      {sidebarTab === 'groups' && (
+        <GroupList groups={groups} onJoin={joinGroup} onCreate={createGroup} activeGroupId={activeGroupId} onSelect={handleSelectGroup} />
       )}
     </div>
   );
+
+  const renderMain = () => {
+    if (activeChat) {
+      return (
+        <PrivateChat
+          messages={privateMessages}
+          username={user.username}
+          otherUser={activeChat}
+          onSend={sendPrivateMessage}
+          onBack={closeChat}
+          decryptMessage={decryptPrivateMessage}
+        />
+      );
+    }
+    if (activeGroup) {
+      return (
+        <GroupChat
+          group={activeGroup}
+          messages={groupMessages}
+          username={user.username}
+          onSendMessage={sendGroupMessage}
+          onLeave={() => leaveGroup(activeGroupId)}
+          onBack={deselectGroup}
+        />
+      );
+    }
+    return (
+      <>
+        <MessageList messages={messages} username={user.username} />
+        <MessageInput onSend={sendMessage} onFileUpload={sendFileMessage} userId={user.username} />
+      </>
+    );
+  };
 
   return (
     <>
@@ -161,25 +219,7 @@ export default function Home() {
             showSidebar && <div style={styles.sidebar}>{sidebarContent}</div>
           )}
           <div style={styles.main}>
-            {activeGroup ? (
-              <GroupChat
-                group={activeGroup}
-                messages={groupMessages}
-                username={user.username}
-                onSendMessage={sendGroupMessage}
-                onLeave={() => leaveGroup(activeGroupId)}
-                onBack={deselectGroup}
-              />
-            ) : (
-              <>
-                <MessageList messages={messages} username={user.username} />
-                <MessageInput
-                  onSend={sendMessage}
-                  onFileUpload={sendFileMessage}
-                  userId={user.username}
-                />
-              </>
-            )}
+            {renderMain()}
           </div>
         </div>
       </div>
@@ -232,7 +272,7 @@ const styles = {
     position: 'relative',
   },
   sidebar: {
-    width: '280px',
+    width: '300px',
     background: '#1a1a1a',
     borderRight: '1px solid #2a2a2a',
     display: 'flex',
@@ -272,10 +312,10 @@ const styles = {
   },
   tab: {
     flex: 1,
-    padding: '14px',
+    padding: '12px 8px',
     background: 'transparent',
     border: 'none',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
     transition: 'color 0.2s',
