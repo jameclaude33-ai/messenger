@@ -1,24 +1,10 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const codes = new Map();
 
 function generateCode() {
   return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function createTransporter() {
-  if (process.env.SMTP_HOST) {
-    return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT) || 587,
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-  }
-  return null;
 }
 
 async function sendVerificationCode(email) {
@@ -26,15 +12,15 @@ async function sendVerificationCode(email) {
   const expiresAt = Date.now() + 10 * 60 * 1000;
   codes.set(email.toLowerCase(), { code, expiresAt, attempts: 0 });
 
-  const transporter = createTransporter();
-  if (!transporter) {
+  if (!RESEND_API_KEY) {
     console.log(`[DEV] Verification code for ${email}: ${code}`);
     return { ok: true, devCode: code };
   }
 
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'Messenger <noreply@flavty.onrender.com>',
+    const resend = new Resend(RESEND_API_KEY);
+    await resend.emails.send({
+      from: 'Messenger <onboarding@resend.dev>',
       to: email,
       subject: 'Код подтверждения — Messenger',
       html: `
