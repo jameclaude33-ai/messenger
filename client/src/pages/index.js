@@ -192,7 +192,12 @@ export default function Home() {
           remoteStream={remoteStream}
           onAccept={() => acceptCall(incomingCall)}
           onReject={() => rejectCall(incomingCall)}
-          onEnd={endCall}
+          onEnd={() => {
+            if (callerSocketId.current) {
+              socket.emit('call:end', { targetSocketId: callerSocketId.current });
+            }
+            endCall();
+          }}
           callerSocketId={callerSocketId}
           incomingData={incomingCall}
         />
