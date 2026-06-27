@@ -23,7 +23,12 @@ const PORT = process.env.PORT || 3001;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
 const ALLOWED_ORIGINS = [CLIENT_URL, 'http://localhost:8081', 'http://localhost:19006'];
 
-app.use(cors({ origin: ALLOWED_ORIGINS }));
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' ? true : ALLOWED_ORIGINS,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/test', express.static(path.join(__dirname, '../public')));
@@ -32,10 +37,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/keys', keysRouter);
 
 const io = new Server(server, {
-  cors: {
-    origin: ALLOWED_ORIGINS,
-    methods: ['GET', 'POST'],
-  },
+  cors: corsOptions,
 });
 
 const users = new Map();
