@@ -266,13 +266,14 @@ app.get('/api/health', (req, res) => {
 });
 
 if (process.env.NODE_ENV === 'production') {
-  const clientBuild = path.join(__dirname, '../../client/.next/static');
-  const clientPublic = path.join(__dirname, '../../client/public');
-  const clientPages = path.join(__dirname, '../../client/.next/server/pages');
-  app.use('/_next/static', express.static(clientBuild));
-  app.use(express.static(clientPublic));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientPages, 'index.html'));
+  const next = require('next');
+  const nextApp = next({ dev: false, dir: path.join(__dirname, '../../client') });
+  const handle = nextApp.getRequestHandler();
+  nextApp.prepare().then(() => {
+    app.all('*', (req, res) => handle(req, res));
+  }).catch(err => {
+    console.error('Next.js prepare failed:', err);
+    app.get('*', (req, res) => res.status(500).send('Client build error'));
   });
 }
 
