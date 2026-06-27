@@ -84,7 +84,6 @@ export function useSocket(token) {
 
     const newSocket = io(SOCKET_URL, {
       auth: { token },
-      autoConnect: false,
     });
     setSocket(newSocket);
 
@@ -181,7 +180,6 @@ export function useChat(socket, e2eKeyPair, e2eReady) {
 
   const join = useCallback(() => {
     if (!socket) return;
-    socket.connect();
     socket.emit('message:history');
     setJoined(true);
   }, [socket]);
