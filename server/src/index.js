@@ -43,7 +43,6 @@ const io = new Server(server, {
 const users = new Map();
 const socketToUser = new Map();
 const userSockets = new Map();
-const activeCalls = new Map();
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -227,24 +226,6 @@ io.on('connection', (socket) => {
       socket.emit('call:error', { message: 'Пользователь не в сети' });
       return;
     }
-    if (activeCalls.has(callerUsername)) {
-      socket.emit('call:error', { message: 'Вы уже в звонке' });
-      return;
-    }
-    if (activeCalls.has(data.targetUsername)) {
-      const existingCall = activeCalls.get(data.targetUsername);
-      if (existingCall.peer === callerUsername) {
-        activeCalls.delete(data.targetUsername);
-        const peerSockets = userSockets.get(data.targetUsername);
-        if (peerSockets) {
-          peerSockets.forEach((sid) => io.to(sid).emit('call:ended', { username: callerUsername }));
-        }
-      } else {
-        socket.emit('call:busy', { username: data.targetUsername });
-        return;
-      }
-    }
-    activeCalls.set(callerUsername, { peer: data.targetUsername, role: 'caller' });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
@@ -254,36 +235,23 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:accept', (data) => {
-    const responderUsername = socketToUser.get(socket.id);
-    const callerUsername = socketToUser.get(data.callerSocketId);
-    if (callerUsername) {
-      activeCalls.set(responderUsername, { peer: callerUsername, role: 'callee' });
-    }
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
-      responderUsername: responderUsername,
+      responderUsername: socketToUser.get(socket.id),
       responderSocketId: socket.id,
     });
   });
 
   socket.on('call:reject', (data) => {
-    const username = socketToUser.get(socket.id);
-    const callerUsername = socketToUser.get(data.callerSocketId);
-    activeCalls.delete(username);
-    activeCalls.delete(callerUsername);
     io.to(data.callerSocketId).emit('call:rejected', {
-      username: username,
+      username: socketToUser.get(socket.id),
     });
   });
 
   socket.on('call:end', (data) => {
-    const username = socketToUser.get(socket.id);
-    const targetUsername = data.targetSocketId ? socketToUser.get(data.targetSocketId) : null;
-    activeCalls.delete(username);
-    if (targetUsername) activeCalls.delete(targetUsername);
     if (data.targetSocketId) {
       io.to(data.targetSocketId).emit('call:ended', {
-        username: username,
+        username: socketToUser.get(socket.id),
       });
     }
   });
@@ -306,17 +274,6 @@ io.on('connection', (socket) => {
           userSockets.delete(username);
           users.delete(username);
           userModel.setOffline(username);
-          if (activeCalls.has(username)) {
-            const call = activeCalls.get(username);
-            const peerSockets = userSockets.get(call.peer);
-            if (peerSockets) {
-              peerSockets.forEach((sid) => {
-                io.to(sid).emit('call:ended', { username });
-              });
-            }
-            activeCalls.delete(call.peer);
-            activeCalls.delete(username);
-          }
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
           io.emit('message:new', {

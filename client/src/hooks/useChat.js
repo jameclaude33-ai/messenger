@@ -404,28 +404,42 @@ export function useP2PCall(socket, username) {
     setRemoteUsername(null);
   };
 
-  const endCall = () => {
+  const endCall = useCallback(() => {
     if (peerConnection.current) {
       peerConnection.current.close();
       peerConnection.current = null;
     }
     if (localStream) {
       localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
     }
+    setLocalStream(null);
     setRemoteStream(null);
     setCallState('idle');
     setRemoteUsername(null);
     callerSocketId.current = null;
-  };
+    pendingCandidates.current = [];
+  }, [localStream]);
 
   useEffect(() => {
     if (!socket) return;
 
     socket.on('call:incoming', (data) => {
+      if (callState !== 'idle') {
+        if (callerSocketId.current) {
+          socket.emit('call:end', { targetSocketId: callerSocketId.current });
+        }
+        if (peerConnection.current) {
+          peerConnection.current.close();
+          peerConnection.current = null;
+        }
+        if (localStream) {
+          localStream.getTracks().forEach((track) => track.stop());
+        }
+      }
       setCallState('ringing');
       setRemoteUsername(data.callerUsername);
       callerSocketId.current = data.callerSocketId;
+      pendingCandidates.current = [];
     });
 
     socket.on('call:accepted', async (data) => {
@@ -459,20 +473,12 @@ export function useP2PCall(socket, username) {
       }
     });
 
-    socket.on('call:cancelled', () => {
-      endCall();
-    });
-
-    socket.on('call:busy', (data) => {
-      socket.emit('call:end', {});
+    socket.on('call:busy', () => {
       endCall();
     });
 
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
-      if (callerSocketId.current) {
-        socket.emit('call:end', { targetSocketId: callerSocketId.current });
-      }
       endCall();
     });
 
@@ -481,7 +487,6 @@ export function useP2PCall(socket, username) {
       socket.off('call:accepted');
       socket.off('call:rejected');
       socket.off('call:ended');
-      socket.off('call:cancelled');
       socket.off('call:busy');
       socket.off('call:ice-candidate');
       socket.off('call:error');

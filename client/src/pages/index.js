@@ -63,6 +63,10 @@ export default function Home() {
   }, [socket]);
 
   useEffect(() => {
+    if (callState === 'idle') setIncomingCall(null);
+  }, [callState]);
+
+  useEffect(() => {
     if (user && token && socket && !joined) join();
   }, [user, token, socket, joined, join]);
 
