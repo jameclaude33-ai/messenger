@@ -43,6 +43,7 @@ const io = new Server(server, {
 const users = new Map();
 const socketToUser = new Map();
 const userSockets = new Map();
+const activeCalls = new Map();
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -221,11 +222,30 @@ io.on('connection', (socket) => {
   // P2P WebRTC signaling
   socket.on('call:initiate', (data) => {
     const callerUsername = socketToUser.get(socket.id);
+    if (!callerUsername) return;
     const targetSockets = userSockets.get(data.targetUsername);
     if (!targetSockets || targetSockets.size === 0) {
       socket.emit('call:error', { message: 'Пользователь не в сети' });
       return;
     }
+    if (activeCalls.has(callerUsername)) {
+      socket.emit('call:error', { message: 'Вы уже в звонке' });
+      return;
+    }
+    if (activeCalls.has(data.targetUsername)) {
+      const targetCall = activeCalls.get(data.targetUsername);
+      if (targetCall.peer === callerUsername) {
+        activeCalls.delete(data.targetUsername);
+        activeCalls.delete(callerUsername);
+        const targetSocketId = targetSockets.values().next().value;
+        io.to(targetSocketId).emit('call:ended', { username: callerUsername });
+        socket.emit('call:ended', { username: data.targetUsername });
+      } else {
+        socket.emit('call:busy', { username: data.targetUsername });
+      }
+      return;
+    }
+    activeCalls.set(callerUsername, { peer: data.targetUsername });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
@@ -235,24 +255,40 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:accept', (data) => {
+    const username = socketToUser.get(socket.id);
+    if (!username) return;
+    const callerUsername = socketToUser.get(data.callerSocketId);
+    if (callerUsername && !activeCalls.has(username)) {
+      activeCalls.set(username, { peer: callerUsername });
+    }
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
-      responderUsername: socketToUser.get(socket.id),
+      responderUsername: username,
       responderSocketId: socket.id,
     });
   });
 
   socket.on('call:reject', (data) => {
-    io.to(data.callerSocketId).emit('call:rejected', {
-      username: socketToUser.get(socket.id),
-    });
+    const username = socketToUser.get(socket.id);
+    const callerUsername = socketToUser.get(data.callerSocketId);
+    if (username) activeCalls.delete(username);
+    if (callerUsername) activeCalls.delete(callerUsername);
+    io.to(data.callerSocketId).emit('call:rejected', { username });
   });
 
   socket.on('call:end', (data) => {
-    if (data.targetSocketId) {
-      io.to(data.targetSocketId).emit('call:ended', {
-        username: socketToUser.get(socket.id),
-      });
+    const username = socketToUser.get(socket.id);
+    if (!username) return;
+    const call = activeCalls.get(username);
+    if (call) {
+      activeCalls.delete(call.peer);
+      activeCalls.delete(username);
+      const peerSockets = userSockets.get(call.peer);
+      if (peerSockets) {
+        peerSockets.forEach((sid) => {
+          io.to(sid).emit('call:ended', { username });
+        });
+      }
     }
   });
 
@@ -274,6 +310,17 @@ io.on('connection', (socket) => {
           userSockets.delete(username);
           users.delete(username);
           userModel.setOffline(username);
+          if (activeCalls.has(username)) {
+            const call = activeCalls.get(username);
+            activeCalls.delete(username);
+            activeCalls.delete(call.peer);
+            const peerSockets = userSockets.get(call.peer);
+            if (peerSockets) {
+              peerSockets.forEach((sid) => {
+                io.to(sid).emit('call:ended', { username });
+              });
+            }
+          }
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
           io.emit('message:new', {

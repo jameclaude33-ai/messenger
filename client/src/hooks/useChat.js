@@ -463,72 +463,8 @@ export function useP2PCall(socket, username) {
     if (!socket) return;
 
     socket.on('call:incoming', (data) => {
-      if (callStateRef.current === 'calling') {
-        const callId = ++callIdRef.current;
-        if (callTimeoutRef.current) {
-          clearTimeout(callTimeoutRef.current);
-          callTimeoutRef.current = null;
-        }
-        if (peerConnection.current) {
-          peerConnection.current.close();
-          peerConnection.current = null;
-        }
-        pendingCandidates.current = [];
-        (async () => {
-          try {
-            if (!localStreamRef.current) {
-              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-              if (callId !== callIdRef.current) {
-                stream.getTracks().forEach((t) => t.stop());
-                return;
-              }
-              localStreamRef.current = stream;
-              setLocalStream(stream);
-            }
-            if (callId !== callIdRef.current) return;
-            setCallState('connected');
-            setRemoteUsername(data.callerUsername);
-            callerSocketId.current = data.callerSocketId;
-
-            const pc = createPeerConnection(data.callerSocketId);
-            localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
-
-            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-            if (callId !== callIdRef.current) return;
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            peerConnection.current = pc;
-
-            socket.emit('call:accept', {
-              callerSocketId: data.callerSocketId,
-              answer,
-            });
-            flushPendingCandidates(data.callerSocketId);
-          } catch (err) {
-            console.error('Failed to auto-accept simultaneous call:', err);
-            if (callId === callIdRef.current) endCall();
-          }
-        })();
-        return;
-      }
       if (callStateRef.current !== 'idle') {
-        if (callerSocketId.current) {
-          socket.emit('call:end', { targetSocketId: callerSocketId.current });
-        }
-        if (peerConnection.current) {
-          peerConnection.current.close();
-          peerConnection.current = null;
-        }
-        const s = localStreamRef.current;
-        if (s) {
-          s.getTracks().forEach((track) => track.stop());
-          localStreamRef.current = null;
-        }
-        setLocalStream(null);
-        setRemoteStream(null);
-        setRemoteUsername(null);
-        callerSocketId.current = null;
-        pendingCandidates.current = [];
+        return;
       }
       setCallState('ringing');
       setRemoteUsername(data.callerUsername);
