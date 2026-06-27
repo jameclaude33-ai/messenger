@@ -459,6 +459,10 @@ export function useP2PCall(socket, username) {
       }
     });
 
+    socket.on('call:cancelled', () => {
+      endCall();
+    });
+
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
       endCall();
@@ -469,6 +473,7 @@ export function useP2PCall(socket, username) {
       socket.off('call:accepted');
       socket.off('call:rejected');
       socket.off('call:ended');
+      socket.off('call:cancelled');
       socket.off('call:ice-candidate');
       socket.off('call:error');
     };

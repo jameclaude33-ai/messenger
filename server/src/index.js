@@ -43,6 +43,7 @@ const io = new Server(server, {
 const users = new Map();
 const socketToUser = new Map();
 const userSockets = new Map();
+const activeCalls = new Map();
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -220,16 +221,29 @@ io.on('connection', (socket) => {
 
   // P2P WebRTC signaling
   socket.on('call:initiate', (data) => {
-    console.log(`Call initiate from ${socketToUser.get(socket.id)} to ${data.targetUsername}`);
+    const callerUsername = socketToUser.get(socket.id);
     const targetSockets = userSockets.get(data.targetUsername);
     if (!targetSockets || targetSockets.size === 0) {
-      console.log(`Target ${data.targetUsername} not found in userSockets`);
-      socket.emit('call:error', { message: 'User not online' });
+      socket.emit('call:error', { message: 'Пользователь не в сети' });
       return;
     }
-    const callerUsername = socketToUser.get(socket.id);
+    if (activeCalls.has(callerUsername)) {
+      socket.emit('call:error', { message: 'Вы уже в звонке' });
+      return;
+    }
+    if (activeCalls.has(data.targetUsername)) {
+      const targetCall = activeCalls.get(data.targetUsername);
+      if (targetCall.peer === callerUsername) {
+        const targetSocketId = targetSockets.values().next().value;
+        io.to(targetSocketId).emit('call:cancelled', { username: callerUsername });
+        activeCalls.delete(data.targetUsername);
+      } else {
+        socket.emit('call:error', { message: 'Пользователь уже в звонке' });
+        return;
+      }
+    }
+    activeCalls.set(callerUsername, { peer: data.targetUsername, role: 'caller' });
     const targetSocketId = targetSockets.values().next().value;
-    console.log(`Sending call:incoming to ${targetSocketId}`);
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
       callerSocketId: socket.id,
@@ -238,23 +252,38 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:accept', (data) => {
+    const responderUsername = socketToUser.get(socket.id);
+    const callerUsername = socketToUser.get(data.callerSocketId);
+    if (callerUsername) {
+      activeCalls.set(responderUsername, { peer: callerUsername, role: 'callee' });
+    }
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
-      responderUsername: socket.user.username,
+      responderUsername: responderUsername,
       responderSocketId: socket.id,
     });
   });
 
   socket.on('call:reject', (data) => {
+    const username = socketToUser.get(socket.id);
+    const callerUsername = socketToUser.get(data.callerSocketId);
+    activeCalls.delete(username);
+    activeCalls.delete(callerUsername);
     io.to(data.callerSocketId).emit('call:rejected', {
-      username: socket.user.username,
+      username: username,
     });
   });
 
   socket.on('call:end', (data) => {
-    io.to(data.targetSocketId).emit('call:ended', {
-      username: socket.user.username,
-    });
+    const username = socketToUser.get(socket.id);
+    const targetUsername = data.targetSocketId ? socketToUser.get(data.targetSocketId) : null;
+    activeCalls.delete(username);
+    if (targetUsername) activeCalls.delete(targetUsername);
+    if (data.targetSocketId) {
+      io.to(data.targetSocketId).emit('call:ended', {
+        username: username,
+      });
+    }
   });
 
   socket.on('call:ice-candidate', (data) => {
@@ -275,6 +304,17 @@ io.on('connection', (socket) => {
           userSockets.delete(username);
           users.delete(username);
           userModel.setOffline(username);
+          if (activeCalls.has(username)) {
+            const call = activeCalls.get(username);
+            const peerSockets = userSockets.get(call.peer);
+            if (peerSockets) {
+              peerSockets.forEach((sid) => {
+                io.to(sid).emit('call:ended', { username });
+              });
+            }
+            activeCalls.delete(call.peer);
+            activeCalls.delete(username);
+          }
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
           io.emit('message:new', {
