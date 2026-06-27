@@ -220,14 +220,18 @@ io.on('connection', (socket) => {
 
   // P2P WebRTC signaling
   socket.on('call:initiate', (data) => {
-    const targetSocketId = socketToUser.get(data.targetUsername);
-    if (!targetSocketId) {
+    console.log(`Call initiate from ${socketToUser.get(socket.id)} to ${data.targetUsername}`);
+    const targetSockets = userSockets.get(data.targetUsername);
+    if (!targetSockets || targetSockets.size === 0) {
+      console.log(`Target ${data.targetUsername} not found in userSockets`);
       socket.emit('call:error', { message: 'User not online' });
       return;
     }
-    const caller = users.get(socketToUser.get(socket.id));
+    const callerUsername = socketToUser.get(socket.id);
+    const targetSocketId = targetSockets.values().next().value;
+    console.log(`Sending call:incoming to ${targetSocketId}`);
     io.to(targetSocketId).emit('call:incoming', {
-      callerUsername: caller.username,
+      callerUsername: callerUsername,
       callerSocketId: socket.id,
       offer: data.offer,
     });
