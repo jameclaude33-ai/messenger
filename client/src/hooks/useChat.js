@@ -311,6 +311,8 @@ export function useP2PCall(socket, username) {
   const peerConnection = useRef(null);
   const callerSocketId = useRef(null);
   const pendingCandidates = useRef([]);
+  const localStreamRef = useRef(null);
+  const callTimeoutRef = useRef(null);
 
   const iceServers = {
     iceServers: [
@@ -352,6 +354,7 @@ export function useP2PCall(socket, username) {
   const initiateCall = async (targetUsername) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
       setLocalStream(stream);
       setCallState('calling');
       setRemoteUsername(targetUsername);
@@ -365,15 +368,25 @@ export function useP2PCall(socket, username) {
       peerConnection.current = pc;
 
       socket.emit('call:initiate', { targetUsername, offer });
+
+      callTimeoutRef.current = setTimeout(() => {
+        socket.emit('call:end', {});
+        endCall();
+      }, 30000);
     } catch (err) {
       console.error('Failed to initiate call:', err);
-      setCallState('idle');
+      endCall();
     }
   };
 
   const acceptCall = async (data) => {
     try {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      localStreamRef.current = stream;
       setLocalStream(stream);
       setCallState('connected');
       callerSocketId.current = data.callerSocketId;
@@ -394,23 +407,30 @@ export function useP2PCall(socket, username) {
       flushPendingCandidates(data.callerSocketId);
     } catch (err) {
       console.error('Failed to accept call:', err);
-      setCallState('idle');
+      endCall();
     }
   };
 
   const rejectCall = (data) => {
     socket.emit('call:reject', { callerSocketId: data.callerSocketId });
-    setCallState('idle');
-    setRemoteUsername(null);
+    endCall();
   };
 
   const endCall = useCallback(() => {
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
+    }
     if (peerConnection.current) {
       peerConnection.current.close();
       peerConnection.current = null;
     }
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
+      localStreamRef.current = null;
     }
     setLocalStream(null);
     setRemoteStream(null);
@@ -418,7 +438,7 @@ export function useP2PCall(socket, username) {
     setRemoteUsername(null);
     callerSocketId.current = null;
     pendingCandidates.current = [];
-  }, [localStream]);
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -432,9 +452,16 @@ export function useP2PCall(socket, username) {
           peerConnection.current.close();
           peerConnection.current = null;
         }
-        if (localStream) {
-          localStream.getTracks().forEach((track) => track.stop());
+        const s = localStreamRef.current;
+        if (s) {
+          s.getTracks().forEach((track) => track.stop());
+          localStreamRef.current = null;
         }
+        setLocalStream(null);
+        setRemoteStream(null);
+        setRemoteUsername(null);
+        callerSocketId.current = null;
+        pendingCandidates.current = [];
       }
       setCallState('ringing');
       setRemoteUsername(data.callerUsername);
