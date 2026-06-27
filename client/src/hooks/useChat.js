@@ -313,6 +313,7 @@ export function useP2PCall(socket, username) {
   const pendingCandidates = useRef([]);
   const localStreamRef = useRef(null);
   const callTimeoutRef = useRef(null);
+  const callIdRef = useRef(0);
 
   const iceServers = {
     iceServers: [
@@ -352,8 +353,13 @@ export function useP2PCall(socket, username) {
   }, [socket]);
 
   const initiateCall = async (targetUsername) => {
+    const callId = ++callIdRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (callId !== callIdRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       localStreamRef.current = stream;
       setLocalStream(stream);
       setCallState('calling');
@@ -364,6 +370,7 @@ export function useP2PCall(socket, username) {
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
       const offer = await pc.createOffer();
+      if (callId !== callIdRef.current) return;
       await pc.setLocalDescription(offer);
       peerConnection.current = pc;
 
@@ -375,17 +382,22 @@ export function useP2PCall(socket, username) {
       }, 30000);
     } catch (err) {
       console.error('Failed to initiate call:', err);
-      endCall();
+      if (callId === callIdRef.current) endCall();
     }
   };
 
   const acceptCall = async (data) => {
+    const callId = ++callIdRef.current;
     try {
       if (callTimeoutRef.current) {
         clearTimeout(callTimeoutRef.current);
         callTimeoutRef.current = null;
       }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (callId !== callIdRef.current) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
       localStreamRef.current = stream;
       setLocalStream(stream);
       setCallState('connected');
@@ -407,7 +419,7 @@ export function useP2PCall(socket, username) {
       flushPendingCandidates(data.callerSocketId);
     } catch (err) {
       console.error('Failed to accept call:', err);
-      endCall();
+      if (callId === callIdRef.current) endCall();
     }
   };
 
@@ -417,6 +429,7 @@ export function useP2PCall(socket, username) {
   };
 
   const endCall = useCallback(() => {
+    callIdRef.current += 1;
     if (callTimeoutRef.current) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
@@ -428,7 +441,7 @@ export function useP2PCall(socket, username) {
     const stream = localStreamRef.current;
     if (stream) {
       stream.getTracks().forEach((track) => {
-        track.stop();
+        try { track.stop(); } catch (e) {}
       });
       localStreamRef.current = null;
     }
@@ -445,6 +458,7 @@ export function useP2PCall(socket, username) {
 
     socket.on('call:incoming', (data) => {
       if (callState === 'calling') {
+        const callId = ++callIdRef.current;
         if (callTimeoutRef.current) {
           clearTimeout(callTimeoutRef.current);
           callTimeoutRef.current = null;
@@ -458,9 +472,14 @@ export function useP2PCall(socket, username) {
           try {
             if (!localStreamRef.current) {
               const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              if (callId !== callIdRef.current) {
+                stream.getTracks().forEach((t) => t.stop());
+                return;
+              }
               localStreamRef.current = stream;
               setLocalStream(stream);
             }
+            if (callId !== callIdRef.current) return;
             setCallState('connected');
             setRemoteUsername(data.callerUsername);
             callerSocketId.current = data.callerSocketId;
@@ -469,6 +488,7 @@ export function useP2PCall(socket, username) {
             localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
 
             await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            if (callId !== callIdRef.current) return;
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             peerConnection.current = pc;
@@ -480,7 +500,7 @@ export function useP2PCall(socket, username) {
             flushPendingCandidates(data.callerSocketId);
           } catch (err) {
             console.error('Failed to auto-accept simultaneous call:', err);
-            endCall();
+            if (callId === callIdRef.current) endCall();
           }
         })();
         return;
