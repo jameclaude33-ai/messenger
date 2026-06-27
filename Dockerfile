@@ -10,7 +10,7 @@ RUN npm install && cd server && npm install && cd ../client && npm install
 
 COPY . .
 
-RUN cd client && npm run build
+RUN echo "Build at $(date)" > /tmp/buildstamp && cd client && npm run build
 
 EXPOSE 10000
 

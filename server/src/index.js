@@ -44,6 +44,19 @@ const users = new Map();
 const socketToUser = new Map();
 const userSockets = new Map();
 
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  if (!token) {
+    return next(new Error('Authentication required'));
+  }
+  const decoded = verifyToken(token);
+  if (!decoded) {
+    return next(new Error('Invalid token'));
+  }
+  socket.user = decoded;
+  next();
+});
+
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.user.username} (${socket.id})`);
 
@@ -269,7 +282,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', users: users.size });
+  res.json({ status: 'ok', users: users.size, timestamp: new Date().toISOString() });
 });
 
 if (process.env.NODE_ENV === 'production') {
