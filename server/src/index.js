@@ -241,6 +241,7 @@ io.on('connection', (socket) => {
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
       responderUsername: socket.user.username,
+      responderSocketId: socket.id,
     });
   });
 

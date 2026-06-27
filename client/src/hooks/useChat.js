@@ -310,6 +310,7 @@ export function useP2PCall(socket, username) {
   const [remoteStream, setRemoteStream] = useState(null);
   const peerConnection = useRef(null);
   const callerSocketId = useRef(null);
+  const pendingCandidates = useRef([]);
 
   const iceServers = {
     iceServers: [
@@ -323,10 +324,14 @@ export function useP2PCall(socket, username) {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit('call:ice-candidate', {
-          targetSocketId,
-          candidate: event.candidate,
-        });
+        if (targetSocketId) {
+          socket.emit('call:ice-candidate', {
+            targetSocketId,
+            candidate: event.candidate,
+          });
+        } else {
+          pendingCandidates.current.push(event.candidate);
+        }
       }
     };
 
@@ -337,12 +342,20 @@ export function useP2PCall(socket, username) {
     return pc;
   }, [socket]);
 
+  const flushPendingCandidates = useCallback((targetSocketId) => {
+    pendingCandidates.current.forEach((candidate) => {
+      socket.emit('call:ice-candidate', { targetSocketId, candidate });
+    });
+    pendingCandidates.current = [];
+  }, [socket]);
+
   const initiateCall = async (targetUsername) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       setLocalStream(stream);
       setCallState('calling');
       setRemoteUsername(targetUsername);
+      pendingCandidates.current = [];
 
       const pc = createPeerConnection(null);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
@@ -377,6 +390,8 @@ export function useP2PCall(socket, username) {
         callerSocketId: data.callerSocketId,
         answer,
       });
+
+      flushPendingCandidates(data.callerSocketId);
     } catch (err) {
       console.error('Failed to accept call:', err);
       setCallState('idle');
@@ -415,11 +430,13 @@ export function useP2PCall(socket, username) {
 
     socket.on('call:accepted', async (data) => {
       setCallState('connected');
+      callerSocketId.current = data.responderSocketId;
       if (peerConnection.current) {
         await peerConnection.current.setRemoteDescription(
           new RTCSessionDescription(data.answer)
         );
       }
+      flushPendingCandidates(data.responderSocketId);
     });
 
     socket.on('call:rejected', () => {
