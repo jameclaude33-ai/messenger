@@ -8,6 +8,7 @@ import {
   getSharedKey,
   clearKeyCache,
 } from '../utils/e2e-crypto';
+import { subscribeToPush, requestNotificationPermission } from '../utils/push';
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
@@ -30,6 +31,7 @@ export function useAuth() {
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
+      subscribeToPush(savedToken).catch(() => {});
     }
     setLoading(false);
   }, []);
@@ -46,6 +48,9 @@ export function useAuth() {
     localStorage.setItem('messenger_user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    requestNotificationPermission().then(() => {
+      subscribeToPush(data.token).catch(() => {});
+    });
     return data;
   };
 
@@ -61,6 +66,9 @@ export function useAuth() {
     localStorage.setItem('messenger_user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
+    requestNotificationPermission().then(() => {
+      subscribeToPush(data.token).catch(() => {});
+    });
     return data;
   };
 

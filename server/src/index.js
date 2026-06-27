@@ -10,9 +10,11 @@ const groupModel = require('./models/group');
 const uploadRouter = require('./routes/upload');
 const authRouter = require('./routes/auth');
 const keysRouter = require('./routes/keys');
+const pushRouter = require('./routes/push');
 const { verifyToken } = require('./middleware/auth');
 const userModel = require('./models/user');
 const keystore = require('./models/keystore');
+const push = require('./utils/push');
 
 require('dotenv').config();
 
@@ -35,6 +37,7 @@ app.use('/test', express.static(path.join(__dirname, '../public')));
 app.use('/api/upload', uploadRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/keys', keysRouter);
+app.use('/api/push', pushRouter);
 
 const io = new Server(server, {
   cors: corsOptions,
@@ -95,8 +98,9 @@ io.on('connection', (socket) => {
   socket.on('message:send', async (data) => {
     const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
+    let message;
     if (data.encrypted) {
-      const message = {
+      message = {
         id: uuidv4(),
         userId: socket.id,
         username: user.username,
@@ -107,10 +111,20 @@ io.on('connection', (socket) => {
         salt: data.salt,
         timestamp: new Date(),
       };
-      io.emit('message:new', message);
     } else {
-      const message = await saveMessage(socket.id, user.username, data.text);
-      io.emit('message:new', message);
+      message = await saveMessage(socket.id, user.username, data.text);
+    }
+    io.emit('message:new', message);
+    const onlineUsernames = new Set(Array.from(users.values()).map(u => u.username));
+    const subscribedUsernames = push.getAllSubscribedUsernames();
+    for (const subUsername of subscribedUsernames) {
+      if (!onlineUsernames.has(subUsername) && subUsername !== user.username) {
+        push.sendPushNotification(subUsername, {
+          title: user.username,
+          body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
+          icon: '/favicon.ico',
+        }).catch(() => {});
+      }
     }
   });
 
