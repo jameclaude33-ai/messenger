@@ -40,42 +40,40 @@ const io = new Server(server, {
 
 const users = new Map();
 const socketToUser = new Map();
-
-io.use((socket, next) => {
-  const token = socket.handshake.auth.token;
-  if (!token) {
-    return next(new Error('Authentication required'));
-  }
-  const decoded = verifyToken(token);
-  if (!decoded) {
-    return next(new Error('Invalid token'));
-  }
-  socket.user = decoded;
-  next();
-});
+const userSockets = new Map();
 
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.user.username} (${socket.id})`);
 
-  users.set(socket.id, {
-    id: socket.id,
-    userId: socket.user.id,
-    username: socket.user.username,
-    joinedAt: new Date(),
-  });
-  socketToUser.set(socket.user.username, socket.id);
-  userModel.setOnline(socket.user.username);
+  const username = socket.user.username;
+  const isNewUser = !userSockets.has(username);
 
-  io.emit('user:list', Array.from(users.values()));
-  io.emit('message:new', {
-    id: uuidv4(),
-    system: true,
-    text: `${socket.user.username} присоединился к чату`,
-    timestamp: new Date(),
-  });
+  if (!userSockets.has(username)) {
+    userSockets.set(username, new Set());
+  }
+  userSockets.get(username).add(socket.id);
+
+  socketToUser.set(socket.id, username);
+
+  if (isNewUser) {
+    users.set(username, {
+      id: username,
+      userId: socket.user.id,
+      username: username,
+      joinedAt: new Date(),
+    });
+    userModel.setOnline(username);
+    io.emit('user:list', Array.from(users.values()));
+    io.emit('message:new', {
+      id: uuidv4(),
+      system: true,
+      text: `${username} присоединился к чату`,
+      timestamp: new Date(),
+    });
+  }
 
   socket.on('message:send', async (data) => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     if (data.encrypted) {
       const message = {
@@ -107,19 +105,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('user:typing', () => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     socket.broadcast.emit('user:typing', user.username);
   });
 
   socket.on('user:stopTyping', () => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     socket.broadcast.emit('user:stopTyping', user.username);
   });
 
   socket.on('group:create', (name) => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     const group = groupModel.createGroup(name, socket.id);
     socket.join(`group:${group.id}`);
@@ -132,7 +130,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('group:join', (groupId) => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     const group = groupModel.joinGroup(groupId, socket.id);
     if (!group) return;
@@ -152,7 +150,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('group:leave', (groupId) => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     groupModel.leaveGroup(groupId, socket.id);
     socket.leave(`group:${groupId}`);
@@ -166,7 +164,7 @@ io.on('connection', (socket) => {
   });
 
   socket.on('group:message:send', (data) => {
-    const user = users.get(socket.id);
+    const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     if (!groupModel.isMember(data.groupId, socket.id)) return;
     const message = groupModel.sendGroupMessage(
@@ -208,7 +206,7 @@ io.on('connection', (socket) => {
       socket.emit('call:error', { message: 'User not online' });
       return;
     }
-    const caller = users.get(socket.id);
+    const caller = users.get(socketToUser.get(socket.id));
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: caller.username,
       callerSocketId: socket.id,
@@ -243,19 +241,26 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const user = users.get(socket.id);
-    if (user) {
-      userModel.setOffline(user.username);
-      socketToUser.delete(user.username);
-      users.delete(socket.id);
-      io.emit('user:stopTyping', user.username);
-      io.emit('user:list', Array.from(users.values()));
-      io.emit('message:new', {
-        id: uuidv4(),
-        system: true,
-        text: `${user.username} покинул чат`,
-        timestamp: new Date(),
-      });
+    const username = socketToUser.get(socket.id);
+    if (username) {
+      socketToUser.delete(socket.id);
+      const sockets = userSockets.get(username);
+      if (sockets) {
+        sockets.delete(socket.id);
+        if (sockets.size === 0) {
+          userSockets.delete(username);
+          users.delete(username);
+          userModel.setOffline(username);
+          io.emit('user:stopTyping', username);
+          io.emit('user:list', Array.from(users.values()));
+          io.emit('message:new', {
+            id: uuidv4(),
+            system: true,
+            text: `${username} покинул чат`,
+            timestamp: new Date(),
+          });
+        }
+      }
     }
     console.log(`User disconnected: ${socket.id}`);
   });
