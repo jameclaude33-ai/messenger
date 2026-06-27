@@ -43,6 +43,7 @@ const io = new Server(server, {
 const users = new Map();
 const socketToUser = new Map();
 const userSockets = new Map();
+const pendingCalls = new Map();
 
 io.use((socket, next) => {
   const token = socket.handshake.auth.token;
@@ -226,6 +227,25 @@ io.on('connection', (socket) => {
       socket.emit('call:error', { message: 'Пользователь не в сети' });
       return;
     }
+    if (pendingCalls.has(callerUsername)) {
+      socket.emit('call:error', { message: 'Вы уже звоните' });
+      return;
+    }
+    const targetPending = pendingCalls.get(data.targetUsername);
+    if (targetPending && targetPending.target === callerUsername) {
+      pendingCalls.delete(data.targetUsername);
+      socket.emit('call:merged', {
+        offer: targetPending.offer,
+        callerSocketId: targetPending.callerSocketId,
+        callerUsername: data.targetUsername,
+      });
+      return;
+    }
+    if (targetPending) {
+      socket.emit('call:busy', { username: data.targetUsername });
+      return;
+    }
+    pendingCalls.set(callerUsername, { target: data.targetUsername, offer: data.offer, callerSocketId: socket.id });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
@@ -235,23 +255,29 @@ io.on('connection', (socket) => {
   });
 
   socket.on('call:accept', (data) => {
+    const username = socketToUser.get(socket.id);
+    pendingCalls.delete(username);
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
-      responderUsername: socketToUser.get(socket.id),
+      responderUsername: username,
       responderSocketId: socket.id,
     });
   });
 
   socket.on('call:reject', (data) => {
+    const username = socketToUser.get(socket.id);
+    pendingCalls.delete(username);
     io.to(data.callerSocketId).emit('call:rejected', {
-      username: socketToUser.get(socket.id),
+      username: username,
     });
   });
 
   socket.on('call:end', (data) => {
+    const username = socketToUser.get(socket.id);
+    pendingCalls.delete(username);
     if (data.targetSocketId) {
       io.to(data.targetSocketId).emit('call:ended', {
-        username: socketToUser.get(socket.id),
+        username: username,
       });
     }
   });
@@ -274,6 +300,7 @@ io.on('connection', (socket) => {
           userSockets.delete(username);
           users.delete(username);
           userModel.setOffline(username);
+          pendingCalls.delete(username);
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
           io.emit('message:new', {

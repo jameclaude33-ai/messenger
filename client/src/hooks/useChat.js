@@ -504,6 +504,45 @@ export function useP2PCall(socket, username) {
       endCall();
     });
 
+    socket.on('call:merged', async (data) => {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+      if (peerConnection.current) {
+        peerConnection.current.close();
+        peerConnection.current = null;
+      }
+      pendingCandidates.current = [];
+      try {
+        if (!localStreamRef.current) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          localStreamRef.current = stream;
+          setLocalStream(stream);
+        }
+        setCallState('connected');
+        setRemoteUsername(data.callerUsername);
+        callerSocketId.current = data.callerSocketId;
+
+        const pc = createPeerConnection(data.callerSocketId);
+        localStreamRef.current.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current));
+
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        peerConnection.current = pc;
+
+        socket.emit('call:accept', {
+          callerSocketId: data.callerSocketId,
+          answer,
+        });
+        flushPendingCandidates(data.callerSocketId);
+      } catch (err) {
+        console.error('Failed to handle merged call:', err);
+        endCall();
+      }
+    });
+
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
       endCall();
@@ -515,6 +554,7 @@ export function useP2PCall(socket, username) {
       socket.off('call:rejected');
       socket.off('call:ended');
       socket.off('call:busy');
+      socket.off('call:merged');
       socket.off('call:ice-candidate');
       socket.off('call:error');
     };
