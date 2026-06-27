@@ -8,7 +8,7 @@ import GroupChat from '../components/GroupChat';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
 import CallModal from '../components/CallModal';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export default function Home() {
   const { user, token, loading, register, login, logout } = useAuth();
@@ -40,26 +40,38 @@ export default function Home() {
   const [sidebarTab, setSidebarTab] = useState('users');
   const [showSidebar, setShowSidebar] = useState(true);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const activeGroup = groups.find((g) => g.id === activeGroupId);
 
   useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    if (isMobile) setShowSidebar(false);
+    else setShowSidebar(true);
+  }, [isMobile]);
+
+  useEffect(() => {
     if (!socket) return;
-
-    socket.on('call:incoming', (data) => {
-      setIncomingCall(data);
-    });
-
-    return () => {
-      socket.off('call:incoming');
-    };
+    socket.on('call:incoming', (data) => setIncomingCall(data));
+    return () => socket.off('call:incoming');
   }, [socket]);
 
   useEffect(() => {
-    if (user && token && socket && !joined) {
-      join();
-    }
+    if (user && token && socket && !joined) join();
   }, [user, token, socket, joined, join]);
+
+  const toggleSidebar = useCallback(() => setShowSidebar(v => !v), []);
+
+  const handleSelectGroup = useCallback((id) => {
+    selectGroup(id);
+    if (isMobile) setShowSidebar(false);
+  }, [selectGroup, isMobile]);
 
   if (loading) {
     return (
@@ -79,6 +91,44 @@ export default function Home() {
     );
   }
 
+  const sidebarContent = (
+    <div style={styles.sidebarInner}>
+      <div style={styles.tabs}>
+        <button
+          onClick={() => setSidebarTab('users')}
+          style={{
+            ...styles.tab,
+            borderBottom: sidebarTab === 'users' ? '2px solid #4f46e5' : '2px solid transparent',
+            color: sidebarTab === 'users' ? '#fff' : '#666',
+          }}
+        >
+          Чаты
+        </button>
+        <button
+          onClick={() => setSidebarTab('groups')}
+          style={{
+            ...styles.tab,
+            borderBottom: sidebarTab === 'groups' ? '2px solid #4f46e5' : '2px solid transparent',
+            color: sidebarTab === 'groups' ? '#fff' : '#666',
+          }}
+        >
+          Группы
+        </button>
+      </div>
+      {sidebarTab === 'users' ? (
+        <UserList users={users} username={user.username} onCall={initiateCall} />
+      ) : (
+        <GroupList
+          groups={groups}
+          onJoin={joinGroup}
+          onCreate={createGroup}
+          activeGroupId={activeGroupId}
+          onSelect={handleSelectGroup}
+        />
+      )}
+    </div>
+  );
+
   return (
     <>
       <GlobalStyles />
@@ -88,48 +138,23 @@ export default function Home() {
           connected={connected}
           e2eReady={e2eReady}
           onDisconnect={logout}
+          onToggleSidebar={toggleSidebar}
         />
         <div style={styles.body}>
-          {showSidebar && (
-            <div style={styles.sidebar}>
-              <div style={styles.tabs}>
-                <button
-                  onClick={() => setSidebarTab('users')}
-                  style={{
-                    ...styles.tab,
-                    borderBottom: sidebarTab === 'users' ? '2px solid #4f46e5' : '2px solid transparent',
-                    color: sidebarTab === 'users' ? '#fff' : '#666',
-                  }}
-                >
-                  Чаты
-                </button>
-                <button
-                  onClick={() => setSidebarTab('groups')}
-                  style={{
-                    ...styles.tab,
-                    borderBottom: sidebarTab === 'groups' ? '2px solid #4f46e5' : '2px solid transparent',
-                    color: sidebarTab === 'groups' ? '#fff' : '#666',
-                  }}
-                >
-                  Группы
-                </button>
-              </div>
-              {sidebarTab === 'users' ? (
-                <UserList
-                  users={users}
-                  username={user.username}
-                  onCall={initiateCall}
-                />
-              ) : (
-                <GroupList
-                  groups={groups}
-                  onJoin={joinGroup}
-                  onCreate={createGroup}
-                  activeGroupId={activeGroupId}
-                  onSelect={selectGroup}
-                />
+          {isMobile ? (
+            <>
+              {showSidebar && (
+                <div style={styles.overlay} onClick={() => setShowSidebar(false)} />
               )}
-            </div>
+              <div style={{
+                ...styles.sidebarMobile,
+                transform: showSidebar ? 'translateX(0)' : 'translateX(-100%)',
+              }}>
+                {sidebarContent}
+              </div>
+            </>
+          ) : (
+            showSidebar && <div style={styles.sidebar}>{sidebarContent}</div>
           )}
           <div style={styles.main}>
             {activeGroup ? (
@@ -184,14 +209,20 @@ const styles = {
   chat: {
     display: 'flex',
     flexDirection: 'column',
-    height: '100vh',
     height: '100dvh',
     background: '#0f0f0f',
+    overflow: 'hidden',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   body: {
     display: 'flex',
     flex: 1,
     overflow: 'hidden',
+    position: 'relative',
   },
   sidebar: {
     width: '280px',
@@ -200,6 +231,33 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     flexShrink: 0,
+  },
+  sidebarMobile: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '85%',
+    maxWidth: '320px',
+    height: '100%',
+    background: '#1a1a1a',
+    zIndex: 200,
+    transition: 'transform 0.25s ease',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  sidebarInner: {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0,0,0,0.5)',
+    zIndex: 199,
   },
   tabs: {
     display: 'flex',
@@ -220,12 +278,13 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
+    minWidth: 0,
   },
   loading: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100vh',
+    height: '100dvh',
     background: '#0f0f0f',
     color: '#888',
     fontSize: '16px',
@@ -234,11 +293,13 @@ const styles = {
     position: 'fixed',
     top: '20px',
     right: '20px',
+    left: '20px',
     background: '#1a1a1a',
     padding: '16px 24px',
     borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: '12px',
     boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
     zIndex: 999,
