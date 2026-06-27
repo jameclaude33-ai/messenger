@@ -193,9 +193,7 @@ export default function Home() {
           onAccept={() => acceptCall(incomingCall)}
           onReject={() => rejectCall(incomingCall)}
           onEnd={() => {
-            if (callerSocketId.current) {
-              socket.emit('call:end', { targetSocketId: callerSocketId.current });
-            }
+            socket.emit('call:end', { targetSocketId: callerSocketId.current });
             endCall();
           }}
           callerSocketId={callerSocketId}

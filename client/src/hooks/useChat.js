@@ -484,10 +484,12 @@ export function useP2PCall(socket, username) {
     });
 
     socket.on('call:rejected', () => {
+      socket.emit('call:end', {});
       endCall();
     });
 
     socket.on('call:ended', () => {
+      socket.emit('call:end', {});
       endCall();
     });
 

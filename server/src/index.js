@@ -280,15 +280,14 @@ io.on('connection', (socket) => {
     const username = socketToUser.get(socket.id);
     if (!username) return;
     const call = activeCalls.get(username);
-    if (call) {
-      activeCalls.delete(call.peer);
-      activeCalls.delete(username);
-      const peerSockets = userSockets.get(call.peer);
-      if (peerSockets) {
-        peerSockets.forEach((sid) => {
-          io.to(sid).emit('call:ended', { username });
-        });
-      }
+    if (!call) return;
+    activeCalls.delete(username);
+    activeCalls.delete(call.peer);
+    const peerSockets = userSockets.get(call.peer);
+    if (peerSockets) {
+      peerSockets.forEach((sid) => {
+        if (sid !== socket.id) io.to(sid).emit('call:ended', { username });
+      });
     }
   });
 
