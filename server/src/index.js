@@ -266,10 +266,13 @@ app.get('/api/health', (req, res) => {
 });
 
 if (process.env.NODE_ENV === 'production') {
-  const clientPath = path.join(__dirname, '../../client/out');
-  app.use(express.static(clientPath));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(clientPath, 'index.html'));
+  const next = require('next');
+  const nextApp = next({ dev: false, dir: path.join(__dirname, '../../client') });
+  const handle = nextApp.getRequestHandler();
+  nextApp.prepare().then(() => {
+    app.all('*', (req, res) => handle(req, res));
+  }).catch(err => {
+    console.error('Next.js prepare failed:', err);
   });
 }
 
