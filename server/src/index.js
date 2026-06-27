@@ -266,18 +266,11 @@ app.get('/api/health', (req, res) => {
 });
 
 if (process.env.NODE_ENV === 'production') {
-  try {
-    const next = require('next');
-    const nextApp = next({ dev: false, dir: path.join(__dirname, '../../client') });
-    const handle = nextApp.getRequestHandler();
-    nextApp.prepare().then(() => {
-      app.all('*', (req, res) => handle(req, res));
-    });
-  } catch (err) {
-    console.error('Next.js not available, serving static only:', err.message);
-    const clientPath = path.join(__dirname, '../../client/.next/static');
-    app.use('/_next', express.static(clientPath));
-  }
+  const clientPath = path.join(__dirname, '../../client/out');
+  app.use(express.static(clientPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientPath, 'index.html'));
+  });
 }
 
 server.listen(PORT, '0.0.0.0', () => {

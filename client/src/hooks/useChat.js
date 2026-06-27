@@ -9,8 +9,15 @@ import {
   clearKeyCache,
 } from '../utils/e2e-crypto';
 
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  return 'http://localhost:3001';
+};
+
+const SOCKET_URL = getBaseUrl();
+const API_URL = getBaseUrl();
 
 export function useAuth() {
   const [user, setUser] = useState(null);
