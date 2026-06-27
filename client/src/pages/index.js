@@ -185,6 +185,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     height: '100vh',
+    height: '100dvh',
     background: '#0f0f0f',
   },
   body: {
@@ -198,6 +199,7 @@ const styles = {
     borderRight: '1px solid #2a2a2a',
     display: 'flex',
     flexDirection: 'column',
+    flexShrink: 0,
   },
   tabs: {
     display: 'flex',

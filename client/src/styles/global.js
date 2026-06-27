@@ -7,15 +7,35 @@ export default function GlobalStyles() {
         box-sizing: border-box;
       }
 
-      body {
+      html, body {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: #0f0f0f;
         color: #e0e0e0;
-        height: 100vh;
+        height: 100%;
+        height: -webkit-fill-available;
+        overflow: hidden;
+        -webkit-text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
       }
 
       #__next {
-        height: 100vh;
+        height: 100%;
+        height: -webkit-fill-available;
+        display: flex;
+        flex-direction: column;
+      }
+
+      input, textarea, button {
+        font-size: 16px !important;
+      }
+
+      @supports (padding: env(safe-area-inset-top)) {
+        body {
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+          padding-right: env(safe-area-inset-right);
+        }
       }
 
       @media (max-width: 768px) {
@@ -28,6 +48,7 @@ export default function GlobalStyles() {
           left: 0;
           width: 260px;
           height: 100vh;
+          height: 100dvh;
           z-index: 100;
           background: #1a1a1a;
         }
