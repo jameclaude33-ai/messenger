@@ -181,6 +181,7 @@ export function useChat(socket, e2eKeyPair, e2eReady) {
   const join = useCallback(() => {
     if (!socket) return;
     socket.emit('message:history');
+    socket.emit('user:list');
     setJoined(true);
   }, [socket]);
 

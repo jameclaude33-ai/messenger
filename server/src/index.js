@@ -87,6 +87,10 @@ io.on('connection', (socket) => {
     });
   }
 
+  socket.on('user:list', () => {
+    socket.emit('user:list', Array.from(users.values()));
+  });
+
   socket.on('message:send', async (data) => {
     const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
