@@ -31,10 +31,20 @@ export function useAuth() {
     if (savedToken && savedUser) {
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
-      subscribeToPush(savedToken).catch(() => {});
     }
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    requestNotificationPermission().then((granted) => {
+      if (granted) {
+        subscribeToPush(token).then((ok) => {
+          if (!ok) console.log('Push subscription failed, retrying in 3s...');
+        });
+      }
+    });
+  }, [token]);
 
   const register = async (username, password) => {
     const res = await fetch(`${API_URL}/api/auth/register`, {
@@ -48,9 +58,6 @@ export function useAuth() {
     localStorage.setItem('messenger_user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
-    requestNotificationPermission().then(() => {
-      subscribeToPush(data.token).catch(() => {});
-    });
     return data;
   };
 
@@ -66,9 +73,6 @@ export function useAuth() {
     localStorage.setItem('messenger_user', JSON.stringify(data.user));
     setToken(data.token);
     setUser(data.user);
-    requestNotificationPermission().then(() => {
-      subscribeToPush(data.token).catch(() => {});
-    });
     return data;
   };
 

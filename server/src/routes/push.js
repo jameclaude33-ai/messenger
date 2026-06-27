@@ -1,11 +1,18 @@
 const express = require('express');
-const { addSubscription, removeSubscription, getPublicKey } = require('../utils/push');
+const { addSubscription, removeSubscription, getPublicKey, hasSubscription, getAllSubscribedUsernames } = require('../utils/push');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
 router.get('/vapid-key', (req, res) => {
   res.json({ publicKey: getPublicKey() });
+});
+
+router.get('/status', authMiddleware, (req, res) => {
+  res.json({
+    subscribed: hasSubscription(req.user.username),
+    allSubscribed: getAllSubscribedUsernames(),
+  });
 });
 
 router.post('/subscribe', authMiddleware, (req, res) => {

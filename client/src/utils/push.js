@@ -27,53 +27,49 @@ async function registerServiceWorker() {
   }
 }
 
-async function subscribeToPush(token) {
-  try {
-    const registration = await registerServiceWorker();
-    if (!registration) {
-      console.log('No service worker registration');
-      return false;
-    }
+async function subscribeToPush(token, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const registration = await registerServiceWorker();
+      if (!registration) {
+        console.log('No service worker registration');
+        return false;
+      }
 
-    const res = await fetch(`${API_URL}/api/push/vapid-key`);
-    if (!res.ok) {
-      console.error('Failed to fetch VAPID key:', res.status);
-      return false;
-    }
-    const { publicKey } = await res.json();
-    console.log('VAPID key fetched');
+      const res = await fetch(`${API_URL}/api/push/vapid-key`);
+      if (!res.ok) {
+        console.error('Failed to fetch VAPID key:', res.status);
+        continue;
+      }
+      const { publicKey } = await res.json();
 
-    let subscription = await registration.pushManager.getSubscription();
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
+
+      const subRes = await fetch(`${API_URL}/api/push/subscribe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
       });
-      console.log('Push subscription created');
-    } else {
-      console.log('Push subscription already exists');
-    }
 
-    const subRes = await fetch(`${API_URL}/api/push/subscribe`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ subscription: subscription.toJSON() }),
-    });
-
-    if (subRes.ok) {
-      console.log('Push subscription sent to server');
-      return true;
-    } else {
-      console.error('Failed to send subscription to server:', subRes.status);
-      return false;
+      if (subRes.ok) {
+        console.log('Push subscribed successfully');
+        return true;
+      }
+    } catch (err) {
+      console.error(`Push subscription attempt ${i + 1} failed:`, err.message);
     }
-  } catch (err) {
-    console.error('Push subscription failed:', err);
-    return false;
+    if (i < retries - 1) await new Promise(r => setTimeout(r, 2000));
   }
+  return false;
 }
 
 async function unsubscribeFromPush(token) {
