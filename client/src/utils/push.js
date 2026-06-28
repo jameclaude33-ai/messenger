@@ -28,27 +28,33 @@ async function registerServiceWorker() {
 }
 
 async function subscribeToPush(token, retries = 3) {
+  console.log('[PUSH] Starting subscription...');
   for (let i = 0; i < retries; i++) {
     try {
       const registration = await registerServiceWorker();
       if (!registration) {
-        console.log('No service worker registration');
+        console.log('[PUSH] No service worker registration');
         return false;
       }
 
       const res = await fetch(`${API_URL}/api/push/vapid-key`);
       if (!res.ok) {
-        console.error('Failed to fetch VAPID key:', res.status);
+        console.error('[PUSH] Failed to fetch VAPID key:', res.status);
         continue;
       }
       const { publicKey } = await res.json();
+      console.log('[PUSH] VAPID key received');
 
       let subscription = await registration.pushManager.getSubscription();
       if (!subscription) {
+        console.log('[PUSH] Creating new subscription...');
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
+        console.log('[PUSH] Subscription created:', subscription.endpoint.substring(0, 50));
+      } else {
+        console.log('[PUSH] Using existing subscription');
       }
 
       const subRes = await fetch(`${API_URL}/api/push/subscribe`, {
@@ -61,11 +67,13 @@ async function subscribeToPush(token, retries = 3) {
       });
 
       if (subRes.ok) {
-        console.log('Push subscribed successfully');
+        console.log('[PUSH] Subscribed successfully');
         return true;
+      } else {
+        console.error('[PUSH] Server rejected subscription:', subRes.status);
       }
     } catch (err) {
-      console.error(`Push subscription attempt ${i + 1} failed:`, err.message);
+      console.error(`[PUSH] Attempt ${i + 1} failed:`, err.message);
     }
     if (i < retries - 1) await new Promise(r => setTimeout(r, 2000));
   }
@@ -95,12 +103,13 @@ async function unsubscribeFromPush(token) {
 
 async function requestNotificationPermission() {
   if (!('Notification' in window)) {
-    console.log('Notifications not supported');
+    console.log('[PUSH] Notifications not supported');
     return false;
   }
+  console.log('[PUSH] Current permission:', Notification.permission);
   if (Notification.permission === 'granted') return true;
   const result = await Notification.requestPermission();
-  console.log('Notification permission:', result);
+  console.log('[PUSH] Permission result:', result);
   return result === 'granted';
 }
 

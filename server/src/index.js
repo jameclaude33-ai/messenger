@@ -113,11 +113,13 @@ io.on('connection', (socket) => {
       });
     }
     socket.emit('private:message', message);
-    if (!users.has(data.to)) {
+    console.log(`[PUSH] Private message from ${sender} to ${data.to}, target online: ${users.has(data.to)}, has subscription: ${push.hasSubscription(data.to)}`);
+    if (!users.has(data.to) && push.hasSubscription(data.to)) {
       push.sendPushNotification(data.to, {
-        title: sender,
+        title: `Новое сообщение от ${sender}`,
         body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
-      }).catch(() => {});
+        url: '/',
+      }).catch((err) => console.error('[PUSH] Failed:', err));
     }
   });
 
@@ -158,13 +160,16 @@ io.on('connection', (socket) => {
     io.emit('message:new', message);
     const onlineUsernames = new Set(Array.from(users.values()).map(u => u.username));
     const subscribedUsernames = push.getAllSubscribedUsernames();
+    console.log(`[PUSH] Global message from ${user.username}, online: [${Array.from(onlineUsernames).join(', ')}], subscribed: [${subscribedUsernames.join(', ')}]`);
     for (const subUsername of subscribedUsernames) {
       if (!onlineUsernames.has(subUsername) && subUsername !== user.username) {
+        console.log(`[PUSH] Sending global push to ${subUsername}`);
         push.sendPushNotification(subUsername, {
           title: user.username,
           body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
           icon: '/favicon.ico',
-        }).catch(() => {});
+          url: '/',
+        }).catch((err) => console.error('[PUSH] Failed:', err));
       }
     }
   });
