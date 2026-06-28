@@ -92,7 +92,10 @@ export function useSocket(token) {
     });
     setSocket(newSocket);
 
-    newSocket.on('connect', () => setConnected(true));
+    newSocket.on('connect', () => {
+      setConnected(true);
+      subscribeToPush(token).catch(() => {});
+    });
     newSocket.on('disconnect', () => setConnected(false));
 
     return () => {
