@@ -1,5 +1,5 @@
 const express = require('express');
-const { addSubscription, removeSubscription, getPublicKey, hasSubscription, getAllSubscribedUsernames } = require('../utils/push');
+const { addSubscription, removeSubscription, getPublicKey, hasSubscription, getAllSubscribedUsernames, sendPushNotification } = require('../utils/push');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -30,6 +30,19 @@ router.post('/unsubscribe', authMiddleware, (req, res) => {
     removeSubscription(req.user.username, subscription.endpoint);
   }
   res.json({ ok: true });
+});
+
+router.post('/test', authMiddleware, async (req, res) => {
+  try {
+    await sendPushNotification(req.user.username, {
+      title: 'Test Push',
+      body: 'Push уведомления работают!',
+      url: '/',
+    });
+    res.json({ ok: true, message: 'Push sent' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;
