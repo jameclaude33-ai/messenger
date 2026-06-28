@@ -1,15 +1,12 @@
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installed');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activated');
   event.waitUntil(clients.claim());
 });
 
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push received!');
   let data = { title: 'Messenger', body: 'Новое сообщение', url: '/' };
   try {
     if (event.data) {
@@ -33,11 +30,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Messenger', options).then(function() {
-      console.log('[SW] Notification shown');
-    }).catch(function(err) {
-      console.error('[SW] showNotification error:', err);
-    })
+    self.registration.showNotification(data.title || 'Messenger', options)
   );
 });
 

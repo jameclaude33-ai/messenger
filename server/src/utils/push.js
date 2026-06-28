@@ -15,9 +15,7 @@ function addSubscription(username, subscription) {
   const exists = subs.find(s => s.endpoint === subscription.endpoint);
   if (!exists) {
     subs.push(subscription);
-    console.log(`[PUSH] Subscription added for ${username} (total: ${subs.length}), endpoint: ${subscription.endpoint.substring(0, 50)}...`);
-  } else {
-    console.log(`[PUSH] Subscription already exists for ${username}`);
+    console.log(`Push subscription added for ${username} (total: ${subs.length})`);
   }
 }
 
@@ -34,19 +32,15 @@ function removeUserSubscriptions(username) {
 async function sendPushNotification(username, payload) {
   const subs = subscriptions.get(username);
   if (!subs || subs.length === 0) {
-    console.log(`[PUSH] No subscriptions for ${username}`);
     return;
   }
 
-  console.log(`[PUSH] Sending to ${username} (${subs.length} subs), payload:`, JSON.stringify(payload));
   const promises = subs.map(async (sub) => {
     try {
       await webpush.sendNotification(sub, JSON.stringify(payload));
-      console.log(`[PUSH] Success for ${username}`);
     } catch (err) {
-      console.error(`[PUSH] Failed for ${username}: status=${err.statusCode} body=${err.body}`);
+      console.error(`Push failed for ${username}:`, err.statusCode, err.message);
       if (err.statusCode === 410 || err.statusCode === 404) {
-        console.log(`[PUSH] Removing stale subscription for ${username}`);
         removeSubscription(username, sub.endpoint);
       }
     }
