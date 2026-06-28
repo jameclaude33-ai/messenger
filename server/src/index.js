@@ -303,11 +303,7 @@ io.on('connection', (socket) => {
       }
       return;
     }
-    activeCalls.set(callerUsername, { peer: data.targetUsername, timer: setTimeout(() => {
-      activeCalls.delete(callerUsername);
-      activeCalls.delete(data.targetUsername);
-      socket.emit('call:ended', { username: data.targetUsername });
-    }, 30000) });
+    activeCalls.set(callerUsername, { peer: data.targetUsername });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
@@ -320,13 +316,8 @@ io.on('connection', (socket) => {
     const username = socketToUser.get(socket.id);
     if (!username) return;
     const callerUsername = socketToUser.get(data.callerSocketId);
-    if (callerUsername) {
-      const callerCall = activeCalls.get(callerUsername);
-      if (callerCall && callerCall.timer) clearTimeout(callerCall.timer);
-      activeCalls.set(callerUsername, { peer: username });
-      if (!activeCalls.has(username)) {
-        activeCalls.set(username, { peer: callerUsername });
-      }
+    if (callerUsername && !activeCalls.has(username)) {
+      activeCalls.set(username, { peer: callerUsername });
     }
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
@@ -338,16 +329,8 @@ io.on('connection', (socket) => {
   socket.on('call:reject', (data) => {
     const username = socketToUser.get(socket.id);
     const callerUsername = socketToUser.get(data.callerSocketId);
-    if (username) {
-      const call = activeCalls.get(username);
-      if (call && call.timer) clearTimeout(call.timer);
-      activeCalls.delete(username);
-    }
-    if (callerUsername) {
-      const call = activeCalls.get(callerUsername);
-      if (call && call.timer) clearTimeout(call.timer);
-      activeCalls.delete(callerUsername);
-    }
+    if (username) activeCalls.delete(username);
+    if (callerUsername) activeCalls.delete(callerUsername);
     io.to(data.callerSocketId).emit('call:rejected', { username });
   });
 
@@ -356,7 +339,6 @@ io.on('connection', (socket) => {
     if (!username) return;
     const call = activeCalls.get(username);
     if (!call) return;
-    if (call.timer) clearTimeout(call.timer);
     activeCalls.delete(username);
     activeCalls.delete(call.peer);
     const peerSockets = userSockets.get(call.peer);
@@ -383,7 +365,6 @@ io.on('connection', (socket) => {
         sockets.delete(socket.id);
         if (activeCalls.has(username)) {
           const call = activeCalls.get(username);
-          if (call.timer) clearTimeout(call.timer);
           activeCalls.delete(username);
           activeCalls.delete(call.peer);
           const peerSockets = userSockets.get(call.peer);
