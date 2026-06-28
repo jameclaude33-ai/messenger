@@ -349,6 +349,7 @@ export function useP2PCall(socket, username) {
   const callStateRef = useRef('idle');
   const screenTrackRef = useRef(null);
   const originalVideoTrackRef = useRef(null);
+  const stopScreenShareRef = useRef(null);
 
   const setCallState = useCallback((val) => {
     callStateRef.current = val;
@@ -511,7 +512,7 @@ export function useP2PCall(socket, username) {
       }
 
       screenTrackRef.current = screenTrack;
-      screenTrack.onended = () => stopScreenShare();
+      screenTrack.onended = () => { if (stopScreenShareRef.current) stopScreenShareRef.current(); };
 
       const newStream = new MediaStream([
         ...localStreamRef.current.getAudioTracks(),
@@ -552,6 +553,10 @@ export function useP2PCall(socket, username) {
 
     originalVideoTrackRef.current = null;
   }, []);
+
+  useEffect(() => {
+    stopScreenShareRef.current = stopScreenShare;
+  }, [stopScreenShare]);
 
   useEffect(() => {
     if (!socket) return;

@@ -42,6 +42,7 @@ export default function CallModal({
 
   const hasVideo = localStream && localStream.getVideoTracks().length > 0;
   const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
+  const isConnected = callState === 'connected';
 
   const handleToggleVideo = () => {
     if (localStream) {
@@ -71,36 +72,38 @@ export default function CallModal({
       setScreenSharing(false);
     } else {
       if (onStartScreenShare) {
-        const ok = await onStartScreenShare();
-        if (ok) setScreenSharing(true);
+        try {
+          const ok = await onStartScreenShare();
+          if (ok) setScreenSharing(true);
+        } catch (e) {
+          console.error('Screen share error:', e);
+        }
       }
     }
   };
+
+  const canScreenShare = typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia;
 
   if (callState === 'idle') return null;
 
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        {(hasVideo || hasRemoteVideo) && (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          style={isConnected && hasRemoteVideo ? styles.remoteVideo : { position: 'absolute', width: 0, height: 0, opacity: 0 }}
+        />
+        {isConnected && hasVideo && (
           <div style={styles.videoContainer}>
-            {hasRemoteVideo && (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                style={styles.remoteVideo}
-              />
-            )}
-            {hasVideo && (
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                style={styles.localVideo}
-              />
-            )}
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={styles.localVideo}
+            />
           </div>
         )}
 
@@ -146,9 +149,11 @@ export default function CallModal({
               <button onClick={handleToggleVideo} style={{ ...styles.button, background: videoEnabled ? '#333' : '#ef4444' }}>
                 {videoEnabled ? '📹' : '📷'}
               </button>
-              <button onClick={handleToggleScreenShare} style={{ ...styles.button, background: screenSharing ? '#4f46e5' : '#333' }}>
-                {screenSharing ? '🖥️' : '💻'}
-              </button>
+              {canScreenShare && (
+                <button onClick={handleToggleScreenShare} style={{ ...styles.button, background: screenSharing ? '#4f46e5' : '#333' }}>
+                  {screenSharing ? '🖥️' : '💻'}
+                </button>
+              )}
               <button onClick={onEnd} style={{ ...styles.button, ...styles.end }}>
                 Завершить
               </button>
