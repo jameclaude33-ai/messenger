@@ -1,9 +1,49 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
 
-const users = new Map();
-const emailToUsername = new Map();
+const DATA_FILE = path.join(__dirname, '../../data/users.json');
 const SALT_ROUNDS = 10;
+
+let users = new Map();
+let emailToUsername = new Map();
+
+function ensureDataDir() {
+  const dir = path.dirname(DATA_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function loadFromDisk() {
+  try {
+    ensureDataDir();
+    if (fs.existsSync(DATA_FILE)) {
+      const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+      users = new Map(data.users || []);
+      emailToUsername = new Map(data.emails || []);
+      console.log(`Loaded ${users.size} users from disk`);
+    }
+  } catch (err) {
+    console.error('Failed to load users from disk:', err.message);
+  }
+}
+
+function saveToDisk() {
+  try {
+    ensureDataDir();
+    const data = {
+      users: Array.from(users.entries()),
+      emails: Array.from(emailToUsername.entries()),
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Failed to save users to disk:', err.message);
+  }
+}
+
+loadFromDisk();
 
 async function register(username, password, email) {
   if (users.has(username)) {
@@ -15,12 +55,13 @@ async function register(username, password, email) {
     username,
     email: email ? email.toLowerCase() : null,
     password: hashedPassword,
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
     online: false,
-    lastSeen: new Date(),
+    lastSeen: new Date().toISOString(),
   };
   users.set(username, user);
   if (email) emailToUsername.set(email.toLowerCase(), username);
+  saveToDisk();
   return { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt };
 }
 
@@ -40,7 +81,8 @@ async function login(usernameOrEmail, password) {
     throw new Error('Invalid credentials');
   }
   user.online = true;
-  user.lastSeen = new Date();
+  user.lastSeen = new Date().toISOString();
+  saveToDisk();
   return { id: user.id, username: user.username, email: user.email };
 }
 
@@ -53,7 +95,8 @@ function setOnline(username) {
   const user = users.get(username);
   if (user) {
     user.online = true;
-    user.lastSeen = new Date();
+    user.lastSeen = new Date().toISOString();
+    saveToDisk();
   }
 }
 
@@ -61,7 +104,8 @@ function setOffline(username) {
   const user = users.get(username);
   if (user) {
     user.online = false;
-    user.lastSeen = new Date();
+    user.lastSeen = new Date().toISOString();
+    saveToDisk();
   }
 }
 

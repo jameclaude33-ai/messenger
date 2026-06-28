@@ -333,6 +333,7 @@ export function useP2PCall(socket, username) {
   const [remoteUsername, setRemoteUsername] = useState(null);
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const peerConnection = useRef(null);
   const callerSocketId = useRef(null);
   const pendingCandidates = useRef([]);
@@ -340,6 +341,8 @@ export function useP2PCall(socket, username) {
   const callTimeoutRef = useRef(null);
   const callIdRef = useRef(0);
   const callStateRef = useRef('idle');
+  const screenStreamRef = useRef(null);
+  const originalVideoTrackRef = useRef(null);
 
   const setCallState = useCallback((val) => {
     callStateRef.current = val;
@@ -370,7 +373,14 @@ export function useP2PCall(socket, username) {
     };
 
     pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
+      const stream = event.streams[0];
+      stream.onremovetrack = () => {
+        setRemoteStream(new MediaStream(stream.getTracks()));
+      };
+      stream.onaddtrack = () => {
+        setRemoteStream(new MediaStream(stream.getTracks()));
+      };
+      setRemoteStream(stream);
     };
 
     return pc;
@@ -465,6 +475,10 @@ export function useP2PCall(socket, username) {
       clearTimeout(callTimeoutRef.current);
       callTimeoutRef.current = null;
     }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
+    }
     if (peerConnection.current) {
       peerConnection.current.close();
       peerConnection.current = null;
@@ -480,8 +494,45 @@ export function useP2PCall(socket, username) {
     setRemoteStream(null);
     setCallState('idle');
     setRemoteUsername(null);
+    setIsScreenSharing(false);
     callerSocketId.current = null;
     pendingCandidates.current = [];
+  }, []);
+
+  const startScreenShare = useCallback(async () => {
+    if (!peerConnection.current || !localStreamRef.current) return;
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const screenTrack = screenStream.getVideoTracks()[0];
+      screenStreamRef.current = screenStream;
+      const sender = peerConnection.current.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) {
+        originalVideoTrackRef.current = sender.track;
+        await sender.replaceTrack(screenTrack);
+      }
+      setIsScreenSharing(true);
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.error('Screen share failed:', err);
+    }
+  }, []);
+
+  const stopScreenShare = useCallback(async () => {
+    if (!peerConnection.current || !screenStreamRef.current) return;
+    try {
+      const sender = peerConnection.current.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender && originalVideoTrackRef.current) {
+        await sender.replaceTrack(originalVideoTrackRef.current);
+        originalVideoTrackRef.current = null;
+      }
+      screenStreamRef.current.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
+      setIsScreenSharing(false);
+    } catch (err) {
+      console.error('Stop screen share failed:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -557,10 +608,13 @@ export function useP2PCall(socket, username) {
     remoteUsername,
     localStream,
     remoteStream,
+    isScreenSharing,
     initiateCall,
     acceptCall,
     rejectCall,
     endCall,
+    startScreenShare,
+    stopScreenShare,
     callerSocketId: callerSocketId.current,
   };
 }

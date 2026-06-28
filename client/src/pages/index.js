@@ -43,10 +43,13 @@ export default function Home() {
     remoteUsername: callRemoteUsername,
     localStream,
     remoteStream,
+    isScreenSharing,
     initiateCall,
     acceptCall,
     rejectCall,
     endCall,
+    startScreenShare,
+    stopScreenShare,
     callerSocketId,
   } = useP2PCall(socket, user?.username);
   const [sidebarTab, setSidebarTab] = useState('chats');
@@ -55,6 +58,17 @@ export default function Home() {
   const [isMobile, setIsMobile] = useState(false);
 
   const activeGroup = groups.find((g) => g.id === activeGroupId);
+
+  useEffect(() => {
+    if (user) {
+      const el = document.documentElement;
+      el.style.height = '0px';
+      requestAnimationFrame(() => {
+        el.style.height = '';
+        window.scrollTo(0, 0);
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768);
@@ -238,6 +252,9 @@ export default function Home() {
           }}
           callerSocketId={callerSocketId}
           incomingData={incomingCall}
+          isScreenSharing={isScreenSharing}
+          onStartScreenShare={startScreenShare}
+          onStopScreenShare={stopScreenShare}
         />
       )}
 
@@ -256,14 +273,8 @@ const styles = {
   chat: {
     display: 'flex',
     flexDirection: 'column',
-    height: '100dvh',
+    height: '100%',
     background: '#0f0f0f',
-    overflow: 'hidden',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   body: {
     display: 'flex',
@@ -331,7 +342,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100dvh',
+    height: '100%',
     background: '#0f0f0f',
     color: '#888',
     fontSize: '16px',

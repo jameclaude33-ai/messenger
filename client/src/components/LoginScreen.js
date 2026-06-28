@@ -39,7 +39,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100vh',
+    height: '100%',
     background: 'linear-gradient(135deg, #0f0f0f 0%, #1a1a2e 100%)',
   },
   card: {

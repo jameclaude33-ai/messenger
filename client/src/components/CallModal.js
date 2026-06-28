@@ -12,6 +12,9 @@ export default function CallModal({
   incomingData,
   onToggleVideo,
   onToggleAudio,
+  isScreenSharing,
+  onStartScreenShare,
+  onStopScreenShare,
 }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -39,6 +42,12 @@ export default function CallModal({
     if (isConnected && remoteStream && remoteVideoRef.current) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(() => {});
+      remoteStream.onaddtrack = () => {
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = new MediaStream(remoteStream.getTracks());
+          remoteVideoRef.current.play().catch(() => {});
+        }
+      };
     }
   }, [isConnected, remoteStream]);
 
@@ -125,6 +134,13 @@ export default function CallModal({
               </button>
               <button onClick={handleToggleVideo} style={{ ...styles.button, background: videoEnabled ? '#333' : '#ef4444' }}>
                 {videoEnabled ? '📹' : '📷'}
+              </button>
+              <button 
+                onClick={isScreenSharing ? onStopScreenShare : onStartScreenShare} 
+                style={{ ...styles.button, background: isScreenSharing ? '#22c55e' : '#333' }}
+                title={isScreenSharing ? 'Остановить демонстрацию' : 'Демонстрация экрана'}
+              >
+                💻
               </button>
               <button onClick={onEnd} style={{ ...styles.button, ...styles.end }}>
                 Завершить

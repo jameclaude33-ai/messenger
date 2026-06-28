@@ -15,3 +15,7 @@ services:
       - key: RESEND_API_KEY
         value: re_GmjjZNDq_JRcmAmEnro4crgUKbyGBJNZc
     healthCheckPath: /api/health
+    disk:
+      name: messenger-data
+      mountPath: /app/server/data
+      sizeGB: 1

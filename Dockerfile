@@ -12,6 +12,8 @@ COPY . .
 
 RUN echo "Build at $(date)" > /tmp/buildstamp && cd client && npm run build
 
+RUN mkdir -p /app/server/data && chown -R node:node /app/server/data
+
 EXPOSE 10000
 
 ENV NODE_ENV=production

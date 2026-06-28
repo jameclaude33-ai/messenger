@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const API_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
 
 export default function AuthScreen({ onLogin, onRegister }) {
+  useEffect(() => {
+    return () => {
+      document.activeElement?.blur();
+      window.scrollTo(0, 0);
+      const html = document.documentElement;
+      html.style.display = 'none';
+      html.offsetHeight;
+      html.style.display = '';
+    };
+  }, []);
   const [mode, setMode] = useState('login');
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -54,6 +64,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      document.activeElement?.blur();
       onRegister(data);
     } catch (err) {
       setError(err.message);
@@ -70,6 +81,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
     setError('');
     setLoading(true);
     try {
+      document.activeElement?.blur();
       await onLogin(username, password);
     } catch (err) {
       setError(err.message);
@@ -206,8 +218,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    height: '100vh',
-    height: '100dvh',
+    height: '100%',
     background: '#0f0f0f',
     padding: '16px',
   },

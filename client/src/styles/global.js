@@ -12,30 +12,19 @@ export default function GlobalStyles() {
         background: #0f0f0f;
         color: #e0e0e0;
         height: 100%;
-        height: -webkit-fill-available;
-        overflow: hidden;
         -webkit-text-size-adjust: 100%;
         -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
       }
 
       #__next {
         height: 100%;
-        height: -webkit-fill-available;
         display: flex;
         flex-direction: column;
       }
 
       input, textarea, button {
         font-size: 16px !important;
-      }
-
-      @supports (padding: env(safe-area-inset-top)) {
-        body {
-          padding-top: env(safe-area-inset-top);
-          padding-bottom: env(safe-area-inset-bottom);
-          padding-left: env(safe-area-inset-left);
-          padding-right: env(safe-area-inset-right);
-        }
       }
 
       @media (max-width: 768px) {
@@ -47,17 +36,13 @@ export default function GlobalStyles() {
           top: 0;
           left: 0;
           width: 260px;
-          height: 100vh;
-          height: 100dvh;
+          bottom: 0;
           z-index: 100;
           background: #1a1a1a;
         }
         .sidebar-overlay {
           position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
+          inset: 0;
           background: rgba(0,0,0,0.5);
           z-index: 99;
         }
