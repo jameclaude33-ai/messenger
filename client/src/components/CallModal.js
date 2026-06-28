@@ -12,14 +12,11 @@ export default function CallModal({
   incomingData,
   onToggleVideo,
   onToggleAudio,
-  onStartScreenShare,
-  onStopScreenShare,
 }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [screenSharing, setScreenSharing] = useState(false);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -42,7 +39,6 @@ export default function CallModal({
 
   const hasVideo = localStream && localStream.getVideoTracks().length > 0;
   const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
-  const isConnected = callState === 'connected';
 
   const handleToggleVideo = () => {
     if (localStream) {
@@ -66,44 +62,30 @@ export default function CallModal({
     if (onToggleAudio) onToggleAudio();
   };
 
-  const handleToggleScreenShare = async () => {
-    if (screenSharing) {
-      if (onStopScreenShare) await onStopScreenShare();
-      setScreenSharing(false);
-    } else {
-      if (onStartScreenShare) {
-        try {
-          const ok = await onStartScreenShare();
-          if (ok) setScreenSharing(true);
-        } catch (e) {
-          console.error('Screen share error:', e);
-        }
-      }
-    }
-  };
-
-  const canScreenShare = typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia;
-
   if (callState === 'idle') return null;
 
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        <video
-          ref={remoteVideoRef}
-          autoPlay
-          playsInline
-          style={isConnected && hasRemoteVideo ? styles.remoteVideo : { position: 'absolute', width: 0, height: 0, opacity: 0 }}
-        />
-        {isConnected && hasVideo && (
+        {(hasVideo || hasRemoteVideo) && (
           <div style={styles.videoContainer}>
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              style={styles.localVideo}
-            />
+            {hasRemoteVideo && (
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                style={styles.remoteVideo}
+              />
+            )}
+            {hasVideo && (
+              <video
+                ref={localVideoRef}
+                autoPlay
+                playsInline
+                muted
+                style={styles.localVideo}
+              />
+            )}
           </div>
         )}
 
@@ -149,11 +131,6 @@ export default function CallModal({
               <button onClick={handleToggleVideo} style={{ ...styles.button, background: videoEnabled ? '#333' : '#ef4444' }}>
                 {videoEnabled ? '📹' : '📷'}
               </button>
-              {canScreenShare && (
-                <button onClick={handleToggleScreenShare} style={{ ...styles.button, background: screenSharing ? '#4f46e5' : '#333' }}>
-                  {screenSharing ? '🖥️' : '💻'}
-                </button>
-              )}
               <button onClick={onEnd} style={{ ...styles.button, ...styles.end }}>
                 Завершить
               </button>

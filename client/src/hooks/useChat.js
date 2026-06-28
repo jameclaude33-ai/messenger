@@ -97,20 +97,13 @@ export function useSocket(token) {
 
     const newSocket = io(SOCKET_URL, {
       auth: { token },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: Infinity,
     });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       setConnected(true);
       setTimeout(() => {
-        subscribeToPush(token).then((ok) => {
-          console.log('Push re-subscription on connect:', ok);
-        }).catch((err) => {
-          console.error('Push re-subscription failed:', err);
-        });
+        subscribeToPush(token).catch(() => {});
       }, 1000);
     });
     newSocket.on('disconnect', () => setConnected(false));
@@ -347,9 +340,6 @@ export function useP2PCall(socket, username) {
   const callTimeoutRef = useRef(null);
   const callIdRef = useRef(0);
   const callStateRef = useRef('idle');
-  const screenTrackRef = useRef(null);
-  const originalVideoTrackRef = useRef(null);
-  const stopScreenShareRef = useRef(null);
 
   const setCallState = useCallback((val) => {
     callStateRef.current = val;
@@ -494,70 +484,6 @@ export function useP2PCall(socket, username) {
     pendingCandidates.current = [];
   }, []);
 
-  const startScreenShare = useCallback(async () => {
-    if (!peerConnection.current || !localStreamRef.current) return false;
-    try {
-      const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      const screenTrack = screenStream.getVideoTracks()[0];
-
-      const sender = peerConnection.current.getSenders().find(
-        (s) => s.track && s.track.kind === 'video'
-      );
-
-      if (sender) {
-        originalVideoTrackRef.current = sender.track;
-        await sender.replaceTrack(screenTrack);
-      } else {
-        peerConnection.current.addTrack(screenTrack, localStreamRef.current);
-      }
-
-      screenTrackRef.current = screenTrack;
-      screenTrack.onended = () => { if (stopScreenShareRef.current) stopScreenShareRef.current(); };
-
-      const newStream = new MediaStream([
-        ...localStreamRef.current.getAudioTracks(),
-        screenTrack,
-      ]);
-      setLocalStream(newStream);
-      localStreamRef.current = newStream;
-      return true;
-    } catch (err) {
-      console.error('Screen share failed:', err);
-      return false;
-    }
-  }, []);
-
-  const stopScreenShare = useCallback(async () => {
-    if (!screenTrackRef.current) return;
-    screenTrackRef.current.stop();
-    screenTrackRef.current = null;
-
-    if (peerConnection.current && originalVideoTrackRef.current) {
-      const sender = peerConnection.current.getSenders().find(
-        (s) => s.track && s.track.kind === 'video'
-      );
-      if (sender) {
-        await sender.replaceTrack(originalVideoTrackRef.current);
-      }
-    }
-
-    if (localStreamRef.current) {
-      const tracks = [
-        ...localStreamRef.current.getAudioTracks(),
-        ...(originalVideoTrackRef.current ? [originalVideoTrackRef.current] : []),
-      ];
-      const newStream = new MediaStream(tracks);
-      setLocalStream(newStream);
-      localStreamRef.current = newStream;
-    }
-
-    originalVideoTrackRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    stopScreenShareRef.current = stopScreenShare;
-  }, [stopScreenShare]);
-
   useEffect(() => {
     if (!socket) return;
 
@@ -633,8 +559,6 @@ export function useP2PCall(socket, username) {
     acceptCall,
     rejectCall,
     endCall,
-    startScreenShare,
-    stopScreenShare,
     callerSocketId: callerSocketId.current,
   };
 }

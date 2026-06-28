@@ -47,8 +47,6 @@ export default function Home() {
     acceptCall,
     rejectCall,
     endCall,
-    startScreenShare,
-    stopScreenShare,
     callerSocketId,
   } = useP2PCall(socket, user?.username);
   const [sidebarTab, setSidebarTab] = useState('chats');
@@ -240,8 +238,6 @@ export default function Home() {
           }}
           callerSocketId={callerSocketId}
           incomingData={incomingCall}
-          onStartScreenShare={startScreenShare}
-          onStopScreenShare={stopScreenShare}
         />
       )}
 
