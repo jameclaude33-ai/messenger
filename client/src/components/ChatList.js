@@ -1,9 +1,6 @@
 export default function ChatList({ chats, activeChat, onSelect, username }) {
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <h3 style={styles.title}>Чаты</h3>
-      </div>
       <div style={styles.list}>
         {chats.length === 0 && (
           <p style={styles.empty}>Нет чатов. Нажмите на пользователя чтобы начать.</p>
@@ -13,7 +10,7 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
             key={chat.chatId}
             style={{
               ...styles.item,
-              background: activeChat === chat.otherUser ? '#2a2a2a' : 'transparent',
+              background: activeChat === chat.otherUser ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
             }}
             onClick={() => onSelect(chat.otherUser)}
           >
@@ -55,22 +52,13 @@ const styles = {
     flexDirection: 'column',
     height: '100%',
   },
-  header: {
-    padding: '16px 20px',
-    borderBottom: '1px solid #2a2a2a',
-  },
-  title: {
-    fontSize: '16px',
-    fontWeight: '600',
-    color: '#fff',
-    margin: 0,
-  },
   list: {
     flex: 1,
     overflowY: 'auto',
+    padding: '10px',
   },
   empty: {
-    color: '#666',
+    color: '#70798a',
     fontSize: '13px',
     padding: '20px',
     textAlign: 'center',
@@ -79,22 +67,22 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    padding: '12px 16px',
+    padding: '12px',
     cursor: 'pointer',
-    borderBottom: '1px solid #1a1a1a',
+    borderRadius: '12px',
     transition: 'background 0.15s',
   },
   avatar: {
     width: '40px',
     height: '40px',
     borderRadius: '50%',
-    background: '#333',
+    background: '#3390ec',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '16px',
     fontWeight: '600',
-    color: '#888',
+    color: '#ffffff',
     flexShrink: 0,
   },
   info: {
@@ -109,22 +97,22 @@ const styles = {
   name: {
     fontSize: '14px',
     fontWeight: '600',
-    color: '#e0e0e0',
+    color: '#ffffff',
   },
   time: {
     fontSize: '11px',
-    color: '#666',
+    color: '#70798a',
   },
   preview: {
-    fontSize: '12px',
-    color: '#888',
+    fontSize: '13px',
+    color: '#70798a',
     margin: '2px 0 0',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
   },
   badge: {
-    background: '#4f46e5',
+    background: '#3390ec',
     color: '#fff',
     fontSize: '11px',
     fontWeight: '700',

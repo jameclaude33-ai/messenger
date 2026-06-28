@@ -15,12 +15,6 @@ export default function GroupList({ groups, onJoin, onCreate, activeGroupId, onS
 
   return (
     <div style={styles.container}>
-      <div style={styles.header}>
-        <h3 style={styles.title}>Группы</h3>
-        <button onClick={() => setCreating(!creating)} style={styles.addBtn}>
-          {creating ? '✕' : '+'}
-        </button>
-      </div>
       {creating && (
         <form onSubmit={handleCreate} style={styles.form}>
           <input
@@ -37,13 +31,19 @@ export default function GroupList({ groups, onJoin, onCreate, activeGroupId, onS
         </form>
       )}
       <div style={styles.list}>
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionTitle}>Группы</span>
+          <button onClick={() => setCreating(!creating)} style={styles.addBtn}>
+            {creating ? '✕' : '+'}
+          </button>
+        </div>
         {groups.map((group) => (
           <div
             key={group.id}
             onClick={() => onSelect(group.id)}
             style={{
               ...styles.group,
-              background: activeGroupId === group.id ? '#4f46e5' : 'transparent',
+              background: activeGroupId === group.id ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
             }}
           >
             <div style={styles.groupAvatar}>
@@ -73,55 +73,30 @@ const styles = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-  },
-  header: {
-    padding: '12px 20px',
-    borderBottom: '1px solid #2a2a2a',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  title: {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  addBtn: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '6px',
-    border: '1px solid #333',
-    background: 'transparent',
-    color: '#888',
-    fontSize: '16px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    overflow: 'hidden',
   },
   form: {
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
     gap: '8px',
-    borderBottom: '1px solid #2a2a2a',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
   },
   input: {
-    padding: '8px 12px',
-    borderRadius: '8px',
-    border: '1px solid #333',
-    background: '#2a2a2a',
+    padding: '10px 12px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'rgba(11, 14, 22, 0.8)',
     color: '#fff',
     fontSize: '14px',
     outline: 'none',
   },
   createBtn: {
-    padding: '8px',
-    borderRadius: '8px',
+    padding: '10px',
+    borderRadius: '12px',
     border: 'none',
-    background: '#4f46e5',
+    background: '#3390ec',
     color: '#fff',
     fontSize: '13px',
     fontWeight: '600',
@@ -130,27 +105,53 @@ const styles = {
   list: {
     flex: 1,
     overflowY: 'auto',
-    padding: '8px',
+    padding: '10px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 10px',
+  },
+  sectionTitle: {
+    fontSize: '12px',
+    color: '#70798a',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  addBtn: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '8px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'transparent',
+    color: '#70798a',
+    fontSize: '16px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   group: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '10px',
-    borderRadius: '8px',
+    gap: '12px',
+    padding: '12px',
+    borderRadius: '12px',
     cursor: 'pointer',
   },
   groupAvatar: {
-    width: '36px',
-    height: '36px',
+    width: '40px',
+    height: '40px',
     borderRadius: '50%',
-    background: '#333',
+    background: '#3390ec',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: '600',
-    color: '#888',
+    color: '#ffffff',
+    flexShrink: 0,
   },
   groupInfo: {
     flex: 1,
@@ -159,25 +160,26 @@ const styles = {
   },
   groupName: {
     fontSize: '14px',
-    color: '#e0e0e0',
+    color: '#ffffff',
     fontWeight: '500',
   },
   groupCount: {
     fontSize: '12px',
-    color: '#666',
+    color: '#70798a',
   },
   joinBtn: {
-    padding: '4px 10px',
-    borderRadius: '6px',
-    border: '1px solid #4f46e5',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    border: '1px solid #3390ec',
     background: 'transparent',
-    color: '#4f46e5',
+    color: '#3390ec',
     fontSize: '12px',
     cursor: 'pointer',
+    flexShrink: 0,
   },
   empty: {
     textAlign: 'center',
-    color: '#666',
+    color: '#70798a',
     fontSize: '13px',
     padding: '20px',
   },

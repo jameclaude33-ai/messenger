@@ -46,9 +46,8 @@ export default function MessageInput({ onSend, onFileUpload, userId }) {
         maxLength={1000}
       />
       <button type="submit" disabled={!text.trim()} style={styles.button}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M22 2L11 13" />
-          <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
     </form>
@@ -58,31 +57,33 @@ export default function MessageInput({ onSend, onFileUpload, userId }) {
 const styles = {
   form: {
     display: 'flex',
-    gap: '12px',
-    padding: '16px 20px',
-    borderTop: '1px solid #2a2a2a',
-    background: '#1a1a1a',
+    gap: '10px',
+    padding: '20px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+    background: '#171c29',
+    alignItems: 'center',
   },
   input: {
     flex: 1,
-    padding: '12px 16px',
+    padding: '14px 16px',
     borderRadius: '12px',
-    border: '1px solid #333',
-    background: '#2a2a2a',
-    color: '#fff',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: '#171c29',
+    color: '#ffffff',
     fontSize: '15px',
     outline: 'none',
   },
   button: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
     border: 'none',
-    background: '#4f46e5',
+    background: '#3390ec',
     color: '#fff',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
 };

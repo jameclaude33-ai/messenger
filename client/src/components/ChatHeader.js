@@ -24,19 +24,16 @@ export default function ChatHeader({ username, connected, e2eReady, onDisconnect
         )}
         <h2 style={styles.title}>Messenger</h2>
         {!isMobile && (
-          <div style={styles.status}>
-            <div style={{
-              ...styles.dot,
-              background: connected ? '#22c55e' : '#ef4444',
-            }} />
-            <span style={styles.statusText}>
-              {connected ? 'Подключено' : 'Отключено'}
-            </span>
-          </div>
+          <span style={{
+            ...styles.status,
+            color: connected ? '#34c759' : '#ff595a',
+          }}>
+            {connected ? '● Подключено' : '● Отключено'}
+          </span>
         )}
         {e2eReady && (
           <div style={styles.e2eBadge} title="End-to-End шифрование активно">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
@@ -57,9 +54,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '12px 16px',
-    background: '#1a1a1a',
-    borderBottom: '1px solid #2a2a2a',
+    padding: '20px',
+    background: '#171c29',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
     flexShrink: 0,
   },
   left: {
@@ -71,23 +68,13 @@ const styles = {
   },
   title: {
     fontSize: '18px',
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: '600',
+    color: '#ffffff',
     whiteSpace: 'nowrap',
   },
   status: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  dot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-  },
-  statusText: {
-    fontSize: '13px',
-    color: '#888',
+    fontSize: '12px',
+    marginLeft: '8px',
   },
   e2eBadge: {
     display: 'flex',
@@ -95,31 +82,31 @@ const styles = {
     gap: '3px',
     padding: '2px 6px',
     borderRadius: '5px',
-    background: 'rgba(34,197,94,0.1)',
-    border: '1px solid rgba(34,197,94,0.3)',
+    background: 'rgba(52, 199, 89, 0.1)',
+    border: '1px solid rgba(52, 199, 89, 0.3)',
   },
   e2eText: {
     fontSize: '10px',
-    color: '#22c55e',
+    color: '#34c759',
     fontWeight: '700',
     letterSpacing: '0.5px',
   },
   right: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '12px',
     flexShrink: 0,
   },
   username: {
-    fontSize: '13px',
-    color: '#888',
+    fontSize: '14px',
+    color: '#70798a',
   },
   button: {
     padding: '6px 12px',
     borderRadius: '8px',
-    border: '1px solid #333',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
     background: 'transparent',
-    color: '#888',
+    color: '#70798a',
     fontSize: '12px',
     cursor: 'pointer',
   },
