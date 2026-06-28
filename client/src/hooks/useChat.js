@@ -489,7 +489,7 @@ export function useP2PCall(socket, username) {
 
     socket.on('call:incoming', (data) => {
       if (callStateRef.current !== 'idle') {
-        return;
+        endCall();
       }
       setCallState('ringing');
       setRemoteUsername(data.callerUsername);
@@ -509,12 +509,10 @@ export function useP2PCall(socket, username) {
     });
 
     socket.on('call:rejected', () => {
-      socket.emit('call:end', {});
       endCall();
     });
 
     socket.on('call:ended', () => {
-      socket.emit('call:end', {});
       endCall();
     });
 

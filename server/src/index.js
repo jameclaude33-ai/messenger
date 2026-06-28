@@ -277,19 +277,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  function cleanupStaleCalls() {
-    const now = Date.now();
-    for (const [user, call] of activeCalls) {
-      if (now - call.at > 60000) {
-        activeCalls.delete(user);
-        if (call.peer) activeCalls.delete(call.peer);
-      }
-    }
-  }
-
   // P2P WebRTC signaling
   socket.on('call:initiate', (data) => {
-    cleanupStaleCalls();
     const callerUsername = socketToUser.get(socket.id);
     if (!callerUsername) return;
     const targetSockets = userSockets.get(data.targetUsername);
@@ -297,21 +286,30 @@ io.on('connection', (socket) => {
       socket.emit('call:error', { message: 'Пользователь не в сети' });
       return;
     }
-    if (activeCalls.has(callerUsername)) {
-      activeCalls.delete(callerUsername);
-    }
-    if (activeCalls.has(data.targetUsername)) {
-      const targetCall = activeCalls.get(data.targetUsername);
-      if (targetCall.peer === callerUsername) {
-        activeCalls.delete(data.targetUsername);
-        const targetSocketId = targetSockets.values().next().value;
-        io.to(targetSocketId).emit('call:ended', { username: callerUsername });
-        socket.emit('call:ended', { username: data.targetUsername });
-      } else {
-        socket.emit('call:busy', { username: data.targetUsername });
-      }
+
+    const callerCall = activeCalls.get(callerUsername);
+    if (callerCall && Date.now() - callerCall.at < 30000) {
+      socket.emit('call:error', { message: 'Вы уже в звонке' });
       return;
     }
+    activeCalls.delete(callerUsername);
+
+    const targetCall = activeCalls.get(data.targetUsername);
+    if (targetCall) {
+      if (Date.now() - targetCall.at > 30000) {
+        activeCalls.delete(data.targetUsername);
+      } else if (targetCall.peer === callerUsername) {
+        activeCalls.delete(data.targetUsername);
+        const tsid = targetSockets.values().next().value;
+        io.to(tsid).emit('call:ended', { username: callerUsername });
+        socket.emit('call:ended', { username: data.targetUsername });
+        return;
+      } else {
+        socket.emit('call:busy', { username: data.targetUsername });
+        return;
+      }
+    }
+
     activeCalls.set(callerUsername, { peer: data.targetUsername, at: Date.now() });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
