@@ -9,9 +9,6 @@ async function register(username, password, email) {
   if (users.has(username)) {
     throw new Error('Username already exists');
   }
-  if (email && emailToUsername.has(email.toLowerCase())) {
-    throw new Error('Email already registered');
-  }
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
   const user = {
     id: uuidv4(),
