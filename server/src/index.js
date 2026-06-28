@@ -113,6 +113,7 @@ io.on('connection', (socket) => {
       });
     }
     socket.emit('private:message', message);
+    console.log(`[MSG] ${sender} -> ${data.to}, push: ${push.hasSubscription(data.to)}`);
     if (push.hasSubscription(data.to) && sender !== data.to) {
       push.sendPushNotification(data.to, {
         title: sender,
@@ -158,6 +159,7 @@ io.on('connection', (socket) => {
     }
     io.emit('message:new', message);
     const subscribedUsernames = push.getAllSubscribedUsernames();
+    console.log(`[MSG] global from ${user.username}, push subs: [${subscribedUsernames.join(', ')}]`);
     for (const subUsername of subscribedUsernames) {
       if (subUsername !== user.username) {
         push.sendPushNotification(subUsername, {
