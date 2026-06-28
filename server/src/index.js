@@ -113,7 +113,7 @@ io.on('connection', (socket) => {
       });
     }
     socket.emit('private:message', message);
-    if (!users.has(data.to) && push.hasSubscription(data.to)) {
+    if (push.hasSubscription(data.to) && sender !== data.to) {
       push.sendPushNotification(data.to, {
         title: sender,
         body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
@@ -157,10 +157,9 @@ io.on('connection', (socket) => {
       message = await saveMessage(socket.id, user.username, data.text);
     }
     io.emit('message:new', message);
-    const onlineUsernames = new Set(Array.from(users.values()).map(u => u.username));
     const subscribedUsernames = push.getAllSubscribedUsernames();
     for (const subUsername of subscribedUsernames) {
-      if (!onlineUsernames.has(subUsername) && subUsername !== user.username) {
+      if (subUsername !== user.username) {
         push.sendPushNotification(subUsername, {
           title: user.username,
           body: data.encrypted ? 'Зашифрованное сообщение' : (data.text || 'Новое сообщение'),
