@@ -379,7 +379,14 @@ export function useP2PCall(socket, username) {
     };
 
     pc.ontrack = (event) => {
-      setRemoteStream(event.streams[0]);
+      const stream = event.streams[0];
+      setRemoteStream(new MediaStream(stream.getTracks()));
+      stream.onaddtrack = () => {
+        setRemoteStream(new MediaStream(stream.getTracks()));
+      };
+      stream.onremovetrack = () => {
+        setRemoteStream(new MediaStream(stream.getTracks()));
+      };
     };
 
     return pc;
