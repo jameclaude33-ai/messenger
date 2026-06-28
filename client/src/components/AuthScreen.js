@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 const API_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
 
@@ -7,26 +7,30 @@ export default function AuthScreen({ onLogin, onRegister }) {
     return () => {
       document.activeElement?.blur();
       window.scrollTo(0, 0);
-      const html = document.documentElement;
-      html.style.display = 'none';
-      html.offsetHeight;
-      html.style.display = '';
     };
   }, []);
+
   const [mode, setMode] = useState('login');
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(['', '', '', '', '', '']);
   const [devCode, setDevCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [codeSent, setCodeSent] = useState(false);
+  const [shake, setShake] = useState(false);
+  const codeRefs = useRef([]);
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 300);
+  };
 
   const handleSendCode = async () => {
     if (!email || !email.includes('@')) {
       setError('Введите корректный email');
+      triggerShake();
       return;
     }
     setError('');
@@ -39,19 +43,58 @@ export default function AuthScreen({ onLogin, onRegister }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setCodeSent(true);
       setStep(2);
       if (data.devCode) setDevCode(data.devCode);
+      setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } catch (err) {
       setError(err.message);
+      triggerShake();
     } finally {
       setLoading(false);
     }
   };
 
+  const handleCodeInput = (index, value) => {
+    if (value.length > 1) value = value[value.length - 1];
+    if (value && !/^\d$/.test(value)) return;
+
+    const newCode = [...code];
+    newCode[index] = value;
+    setCode(newCode);
+
+    if (value && index < 5) {
+      codeRefs.current[index + 1]?.focus();
+    }
+
+    if (newCode.every(c => c) && index === 5) {
+      setTimeout(() => setStep(3), 200);
+    }
+  };
+
+  const handleCodeKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      codeRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleCodePaste = (e) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setCode(pasted.split(''));
+      setTimeout(() => setStep(3), 200);
+    }
+  };
+
   const handleRegister = async () => {
-    if (!username || !password || !code) {
+    if (!username || !password) {
       setError('Заполните все поля');
+      triggerShake();
+      return;
+    }
+    if (password.length < 6) {
+      setError('Пароль минимум 6 символов');
+      triggerShake();
       return;
     }
     setError('');
@@ -60,7 +103,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, email, code }),
+        body: JSON.stringify({ username, password, email, code: code.join('') }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -68,6 +111,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       onRegister(data);
     } catch (err) {
       setError(err.message);
+      triggerShake();
     } finally {
       setLoading(false);
     }
@@ -76,6 +120,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
   const handleLogin = async () => {
     if (!username || !password) {
       setError('Заполните все поля');
+      triggerShake();
       return;
     }
     setError('');
@@ -85,130 +130,203 @@ export default function AuthScreen({ onLogin, onRegister }) {
       await onLogin(username, password);
     } catch (err) {
       setError(err.message);
+      triggerShake();
     } finally {
       setLoading(false);
     }
   };
 
-  if (mode === 'login') {
-    return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <h1 style={styles.title}>Messenger</h1>
-          <p style={styles.subtitle}>Войдите в аккаунт</p>
-          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} style={styles.form}>
-            <input
-              type="text"
-              placeholder="Email или имя"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={styles.input}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
-              required
-            />
-            {error && <p style={styles.error}>{error}</p>}
-            <button type="submit" style={styles.button} disabled={loading}>
-              {loading ? 'Загрузка...' : 'Войти'}
-            </button>
-          </form>
-          <p style={styles.switch}>
-            Нет аккаунта?{' '}
-            <button onClick={() => { setMode('register'); setStep(1); setError(''); }} style={styles.link}>
-              Зарегистрироваться
-            </button>
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const getTitle = () => {
+    if (mode === 'login') return 'Вход в аккаунт';
+    if (step === 1) return 'Регистрация';
+    if (step === 2) return 'Проверка кода';
+    return 'О себе';
+  };
+
+  const getSubtitle = () => {
+    if (mode === 'login') return 'Введите ваши данные для входа';
+    if (step === 1) return 'Введите email для получения кода';
+    if (step === 2) return `Код отправлен на ${email}`;
+    return 'Укажите имя пользователя и пароль';
+  };
 
   return (
     <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Регистрация</h1>
-        <p style={styles.subtitle}>
-          {step === 1 ? 'Введите email для получения кода' : 'Введите код из письма'}
-        </p>
+      <div style={{
+        ...styles.card,
+        animation: shake ? 'shake 0.3s ease-in-out' : 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+      }}>
+        <div style={styles.logoSection}>
+          <div style={styles.logoIcon}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+              <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+            </svg>
+          </div>
+          <h1 style={styles.title}>{getTitle()}</h1>
+          <p style={styles.subtitle}>{getSubtitle()}</p>
+        </div>
 
-        {step === 1 && (
-          <div style={styles.form}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={styles.input}
-              required
-            />
+        {mode === 'login' && (
+          <div style={styles.step}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Имя пользователя или Email</label>
+              <input
+                type="text"
+                placeholder="username или email"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Пароль</label>
+              <input
+                type="password"
+                placeholder="Введите пароль"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={styles.input}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              />
+            </div>
             {error && <p style={styles.error}>{error}</p>}
-            <button onClick={handleSendCode} style={styles.button} disabled={loading}>
-              {loading ? 'Отправка...' : 'Получить код'}
+            {devCode && (
+              <div style={styles.devCode}>
+                Код: <strong>{devCode}</strong>
+              </div>
+            )}
+            <button onClick={handleLogin} style={styles.button} disabled={loading}>
+              {loading ? 'Загрузка...' : 'Войти'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
             </button>
+            <div style={styles.centerLink}>
+              <button onClick={() => { setMode('register'); setStep(1); setError(''); }} style={styles.link}>
+                Нет аккаунта? Зарегистрироваться
+              </button>
+            </div>
           </div>
         )}
 
-        {step === 2 && (
-          <div style={styles.form}>
-            <div style={styles.codeInfo}>
-              Код отправлен на <strong>{email}</strong>
+        {mode === 'register' && step === 1 && (
+          <div style={styles.step}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Email</label>
+              <input
+                type="email"
+                placeholder="example@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={styles.input}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendCode()}
+              />
+              <p style={styles.hint}>Мы отправим код подтверждения на эту почту</p>
+            </div>
+            {error && <p style={styles.error}>{error}</p>}
+            <button onClick={handleSendCode} style={styles.button} disabled={loading}>
+              {loading ? 'Отправка...' : 'Получить код'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <div style={styles.centerLink}>
+              <button onClick={() => { setMode('login'); setError(''); }} style={styles.link}>
+                Уже есть аккаунт? Войти
+              </button>
+            </div>
+          </div>
+        )}
+
+        {mode === 'register' && step === 2 && (
+          <div style={styles.step}>
+            <div style={styles.codeContainer}>
+              {code.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => codeRefs.current[i] = el}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleCodeInput(i, e.target.value)}
+                  onKeyDown={(e) => handleCodeKeyDown(i, e)}
+                  onPaste={handleCodePaste}
+                  style={styles.codeInput}
+                />
+              ))}
             </div>
             {devCode && (
               <div style={styles.devCode}>
                 Код: <strong>{devCode}</strong>
               </div>
             )}
-            <input
-              type="text"
-              placeholder="Код из письма"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              style={{ ...styles.input, ...styles.codeInput }}
-              maxLength={6}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Имя пользователя"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={styles.input}
-              minLength={2}
-              maxLength={20}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Пароль (минимум 6 символов)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={styles.input}
-              minLength={6}
-              required
-            />
             {error && <p style={styles.error}>{error}</p>}
-            <button onClick={handleRegister} style={styles.button} disabled={loading}>
-              {loading ? 'Регистрация...' : 'Зарегистрироваться'}
-            </button>
-            <button onClick={() => { setStep(1); setError(''); }} style={styles.backLink}>
-              ← Изменить email
-            </button>
+            <p style={styles.hint}>Введите 6-значный код из письма</p>
+            <div style={styles.centerLink}>
+              <button onClick={() => { setStep(1); setError(''); }} style={styles.link}>
+                Изменить email
+              </button>
+            </div>
           </div>
         )}
 
-        <p style={styles.switch}>
-          Уже есть аккаунт?{' '}
-          <button onClick={() => { setMode('login'); setStep(1); setError(''); }} style={styles.link}>
-            Войти
-          </button>
-        </p>
+        {mode === 'register' && step === 3 && (
+          <div style={styles.step}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Имя пользователя</label>
+              <input
+                type="text"
+                placeholder="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={styles.input}
+                minLength={2}
+                maxLength={20}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Пароль</label>
+              <input
+                type="password"
+                placeholder="Минимум 6 символов"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={styles.input}
+                minLength={6}
+                onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              />
+            </div>
+            {error && <p style={styles.error}>{error}</p>}
+            <button onClick={handleRegister} style={styles.button} disabled={loading}>
+              {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </button>
+            <div style={styles.centerLink}>
+              <button onClick={() => { setStep(2); setError(''); }} style={styles.link}>
+                Назад
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          20%, 60% { transform: translateX(-6px); }
+          40%, 80% { transform: translateX(6px); }
+        }
+      `}</style>
     </div>
   );
 }
@@ -219,53 +337,115 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
-    background: '#0f0f0f',
-    padding: '16px',
+    background: 'radial-gradient(circle at 50% 0%, #1a233a 0%, #0f131c 100%)',
+    padding: '20px',
   },
   card: {
-    background: '#1a1a1a',
-    borderRadius: '12px',
-    padding: '32px 24px',
     width: '100%',
-    maxWidth: '400px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+    maxWidth: '420px',
+    background: 'rgba(23, 28, 41, 0.65)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '24px',
+    padding: '40px 36px',
+    backdropFilter: 'blur(24px)',
+    WebkitBackdropFilter: 'blur(24px)',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+  },
+  logoSection: {
+    textAlign: 'center',
+    marginBottom: '32px',
+  },
+  logoIcon: {
+    width: '64px',
+    height: '64px',
+    background: 'linear-gradient(135deg, #3390ec, #1a6cb3)',
+    borderRadius: '18px',
+    display: 'inline-flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: '16px',
+    boxShadow: '0 8px 16px rgba(51, 144, 236, 0.25)',
   },
   title: {
-    color: '#fff',
-    fontSize: '28px',
-    fontWeight: '700',
-    textAlign: 'center',
+    fontSize: '24px',
+    fontWeight: '600',
+    color: '#ffffff',
     margin: '0 0 8px 0',
+    letterSpacing: '-0.5px',
   },
   subtitle: {
-    color: '#888',
+    color: '#70798a',
     fontSize: '14px',
-    textAlign: 'center',
-    margin: '0 0 24px 0',
+    lineHeight: '1.5',
+    margin: 0,
   },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
+  step: {
+    animation: 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+  },
+  formGroup: {
+    marginBottom: '24px',
+  },
+  label: {
+    display: 'block',
+    color: '#70798a',
+    fontSize: '12px',
+    fontWeight: '500',
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   input: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    border: '1px solid #333',
-    background: '#0f0f0f',
-    color: '#fff',
-    fontSize: '14px',
+    width: '100%',
+    padding: '14px 16px',
+    background: 'rgba(11, 14, 22, 0.8)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '12px',
+    color: '#ffffff',
+    fontSize: '16px',
     outline: 'none',
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box',
+  },
+  codeContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '10px',
+    margin: '28px 0',
   },
   codeInput: {
+    width: '52px',
+    height: '56px',
+    background: 'rgba(11, 14, 22, 0.8)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '12px',
+    color: '#ffffff',
     fontSize: '24px',
+    fontWeight: '600',
     textAlign: 'center',
-    letterSpacing: '8px',
-    fontWeight: '700',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    boxSizing: 'border-box',
   },
-  codeInfo: {
-    color: '#888',
+  button: {
+    width: '100%',
+    padding: '14px',
+    background: '#3390ec',
+    border: 'none',
+    borderRadius: '12px',
+    color: '#ffffff',
+    fontSize: '16px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background 0.2s ease, transform 0.1s ease',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  error: {
+    color: '#ff595a',
     fontSize: '13px',
+    margin: '0 0 12px 0',
     textAlign: 'center',
   },
   devCode: {
@@ -276,45 +456,25 @@ const styles = {
     padding: '8px',
     borderRadius: '8px',
     border: '1px solid rgba(245,158,11,0.3)',
+    marginBottom: '12px',
   },
-  button: {
-    padding: '12px',
-    borderRadius: '8px',
-    border: 'none',
-    background: '#4f46e5',
-    color: '#fff',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
+  hint: {
+    fontSize: '13px',
+    color: '#70798a',
     marginTop: '8px',
-  },
-  error: {
-    color: '#ef4444',
-    fontSize: '13px',
-    margin: '0',
-    textAlign: 'center',
-  },
-  switch: {
-    color: '#888',
-    fontSize: '13px',
-    textAlign: 'center',
-    margin: '16px 0 0 0',
+    lineHeight: '1.4',
   },
   link: {
     background: 'none',
     border: 'none',
-    color: '#4f46e5',
+    color: '#3390ec',
     cursor: 'pointer',
-    fontSize: '13px',
-    textDecoration: 'underline',
+    fontSize: '14px',
+    textDecoration: 'none',
+    marginTop: '16px',
+    display: 'inline-block',
   },
-  backLink: {
-    background: 'none',
-    border: 'none',
-    color: '#888',
-    cursor: 'pointer',
-    fontSize: '12px',
+  centerLink: {
     textAlign: 'center',
-    padding: '4px',
   },
 };
