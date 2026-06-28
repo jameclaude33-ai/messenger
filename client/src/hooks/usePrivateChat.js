@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getSharedKey, encryptMessage, decryptMessage } from '../utils/e2e-crypto';
 
-export function usePrivateChats(socket, e2eKeyPair, e2eReady, token) {
+export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -21,6 +21,14 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token) {
         });
       }
       socket.emit('private:chats');
+      const sender = message.from;
+      if (sender !== user?.username && document.hidden && Notification.permission === 'granted') {
+        new Notification(sender || 'Messenger', {
+          body: message.encrypted ? 'Зашифрованное сообщение' : (message.text || 'Новое сообщение'),
+          icon: '/favicon.ico',
+          tag: 'pm-' + message.id,
+        });
+      }
     });
 
     socket.on('private:history', (history) => {

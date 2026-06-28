@@ -17,7 +17,7 @@ export default function Home() {
   const { user, token, loading, register, login, logout } = useAuth();
   const { socket, connected } = useSocket(token);
   const { keyPair: e2eKeyPair, ready: e2eReady } = useE2E(socket, token);
-  const { messages, users, joined, join, sendMessage, sendFileMessage } = useChat(socket, e2eKeyPair, e2eReady);
+  const { messages, users, joined, join, sendMessage, sendFileMessage } = useChat(socket, e2eKeyPair, e2eReady, user);
   const {
     groups,
     activeGroupId,
@@ -37,7 +37,7 @@ export default function Home() {
     closeChat,
     sendPrivateMessage,
     decryptMessage: decryptPrivateMessage,
-  } = usePrivateChats(socket, e2eKeyPair, e2eReady, token);
+  } = usePrivateChats(socket, e2eKeyPair, e2eReady, token, user);
   const {
     callState,
     remoteUsername: callRemoteUsername,

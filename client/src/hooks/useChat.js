@@ -154,7 +154,7 @@ export function useE2E(socket, token) {
   return { keyPair, ready };
 }
 
-export function useChat(socket, e2eKeyPair, e2eReady) {
+export function useChat(socket, e2eKeyPair, e2eReady, user) {
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
@@ -180,6 +180,13 @@ export function useChat(socket, e2eKeyPair, e2eReady) {
         setMessages((prev) => [...prev, decrypted]);
       } else {
         setMessages((prev) => [...prev, message]);
+      }
+      if (!message.system && message.username !== user?.username && document.hidden && Notification.permission === 'granted') {
+        new Notification(message.username || 'Messenger', {
+          body: message.text || 'Новое сообщение',
+          icon: '/favicon.ico',
+          tag: 'msg-' + message.id,
+        });
       }
     };
 
