@@ -277,8 +277,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  function cleanupStaleCalls() {
+    const now = Date.now();
+    for (const [user, call] of activeCalls) {
+      if (now - call.at > 60000) {
+        activeCalls.delete(user);
+        if (call.peer) activeCalls.delete(call.peer);
+      }
+    }
+  }
+
   // P2P WebRTC signaling
   socket.on('call:initiate', (data) => {
+    cleanupStaleCalls();
     const callerUsername = socketToUser.get(socket.id);
     if (!callerUsername) return;
     const targetSockets = userSockets.get(data.targetUsername);
@@ -287,14 +298,12 @@ io.on('connection', (socket) => {
       return;
     }
     if (activeCalls.has(callerUsername)) {
-      socket.emit('call:error', { message: 'Вы уже в звонке' });
-      return;
+      activeCalls.delete(callerUsername);
     }
     if (activeCalls.has(data.targetUsername)) {
       const targetCall = activeCalls.get(data.targetUsername);
       if (targetCall.peer === callerUsername) {
         activeCalls.delete(data.targetUsername);
-        activeCalls.delete(callerUsername);
         const targetSocketId = targetSockets.values().next().value;
         io.to(targetSocketId).emit('call:ended', { username: callerUsername });
         socket.emit('call:ended', { username: data.targetUsername });
@@ -303,7 +312,7 @@ io.on('connection', (socket) => {
       }
       return;
     }
-    activeCalls.set(callerUsername, { peer: data.targetUsername });
+    activeCalls.set(callerUsername, { peer: data.targetUsername, at: Date.now() });
     const targetSocketId = targetSockets.values().next().value;
     io.to(targetSocketId).emit('call:incoming', {
       callerUsername: callerUsername,
@@ -316,8 +325,12 @@ io.on('connection', (socket) => {
     const username = socketToUser.get(socket.id);
     if (!username) return;
     const callerUsername = socketToUser.get(data.callerSocketId);
-    if (callerUsername && !activeCalls.has(username)) {
-      activeCalls.set(username, { peer: callerUsername });
+    if (callerUsername) {
+      const existing = activeCalls.get(callerUsername);
+      activeCalls.set(callerUsername, { peer: username, at: existing ? existing.at : Date.now() });
+    }
+    if (!activeCalls.has(username)) {
+      activeCalls.set(username, { peer: callerUsername, at: Date.now() });
     }
     io.to(data.callerSocketId).emit('call:accepted', {
       answer: data.answer,
@@ -340,7 +353,7 @@ io.on('connection', (socket) => {
     const call = activeCalls.get(username);
     if (!call) return;
     activeCalls.delete(username);
-    activeCalls.delete(call.peer);
+    if (call.peer) activeCalls.delete(call.peer);
     const peerSockets = userSockets.get(call.peer);
     if (peerSockets) {
       peerSockets.forEach((sid) => {
