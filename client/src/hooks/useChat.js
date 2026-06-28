@@ -40,10 +40,18 @@ export function useAuth() {
     requestNotificationPermission().then((granted) => {
       if (granted) {
         subscribeToPush(token).then((ok) => {
-          if (!ok) console.log('Push subscription failed, retrying in 3s...');
+          console.log('Push subscription on auth:', ok);
         });
       }
     });
+
+    const interval = setInterval(() => {
+      if (Notification.permission === 'granted') {
+        subscribeToPush(token).catch(() => {});
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   const register = async (data) => {
@@ -89,12 +97,21 @@ export function useSocket(token) {
 
     const newSocket = io(SOCKET_URL, {
       auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
     });
     setSocket(newSocket);
 
     newSocket.on('connect', () => {
       setConnected(true);
-      subscribeToPush(token).catch(() => {});
+      setTimeout(() => {
+        subscribeToPush(token).then((ok) => {
+          console.log('Push re-subscription on connect:', ok);
+        }).catch((err) => {
+          console.error('Push re-subscription failed:', err);
+        });
+      }, 1000);
     });
     newSocket.on('disconnect', () => setConnected(false));
 
