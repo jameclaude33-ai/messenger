@@ -12,11 +12,14 @@ export default function CallModal({
   incomingData,
   onToggleVideo,
   onToggleAudio,
+  onStartScreenShare,
+  onStopScreenShare,
 }) {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const [videoEnabled, setVideoEnabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
+  const [screenSharing, setScreenSharing] = useState(false);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -60,6 +63,18 @@ export default function CallModal({
       }
     }
     if (onToggleAudio) onToggleAudio();
+  };
+
+  const handleToggleScreenShare = async () => {
+    if (screenSharing) {
+      if (onStopScreenShare) await onStopScreenShare();
+      setScreenSharing(false);
+    } else {
+      if (onStartScreenShare) {
+        const ok = await onStartScreenShare();
+        if (ok) setScreenSharing(true);
+      }
+    }
   };
 
   if (callState === 'idle') return null;
@@ -130,6 +145,9 @@ export default function CallModal({
               </button>
               <button onClick={handleToggleVideo} style={{ ...styles.button, background: videoEnabled ? '#333' : '#ef4444' }}>
                 {videoEnabled ? '📹' : '📷'}
+              </button>
+              <button onClick={handleToggleScreenShare} style={{ ...styles.button, background: screenSharing ? '#4f46e5' : '#333' }}>
+                {screenSharing ? '🖥️' : '💻'}
               </button>
               <button onClick={onEnd} style={{ ...styles.button, ...styles.end }}>
                 Завершить
