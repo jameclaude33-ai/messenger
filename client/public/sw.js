@@ -33,7 +33,11 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Messenger', options)
+    self.registration.showNotification(data.title || 'Messenger', options).then(function() {
+      console.log('[SW] Notification shown');
+    }).catch(function(err) {
+      console.error('[SW] showNotification error:', err);
+    })
   );
 });
 
