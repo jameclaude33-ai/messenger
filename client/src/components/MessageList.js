@@ -45,45 +45,50 @@ export default function MessageList({ messages, username }) {
 
   return (
     <div style={styles.container}>
-      {messages.map((msg) => {
-        if (msg.system) {
+      <div style={styles.messages}>
+        {messages.map((msg) => {
+          if (msg.system) {
+            return (
+              <div key={msg.id} style={styles.systemMessage}>
+                {msg.text}
+              </div>
+            );
+          }
+
+          const isOwn = msg.username === username;
+
           return (
-            <div key={msg.id} style={styles.systemMessage}>
-              {msg.text}
-            </div>
-          );
-        }
-
-        const isOwn = msg.username === username;
-
-        return (
-          <div
-            key={msg.id}
-            style={{
-              ...styles.messageWrapper,
-              justifyContent: isOwn ? 'flex-end' : 'flex-start',
-            }}
-          >
             <div
+              key={msg.id}
               style={{
-                ...styles.message,
-                background: isOwn ? '#4f46e5' : '#2a2a2a',
-                borderBottomRightRadius: isOwn ? '4px' : '16px',
-                borderBottomLeftRadius: isOwn ? '16px' : '4px',
+                ...styles.messageWrapper,
+                justifyContent: isOwn ? 'flex-end' : 'flex-start',
               }}
             >
-              {!isOwn && <div style={styles.username}>{msg.username}</div>}
-              {msg.file ? (
-                <FilePreview file={msg.file} />
-              ) : (
-                <div style={styles.text}>{msg.text}</div>
-              )}
-              <div style={styles.time}>{formatTime(msg.timestamp)}</div>
+              <div
+                style={{
+                  ...styles.message,
+                  background: isOwn ? 'var(--my-message-bg, #2b5278)' : 'var(--message-bg, #1e2838)',
+                  borderBottomRightRadius: isOwn ? '4px' : '14px',
+                  borderBottomLeftRadius: isOwn ? '14px' : '4px',
+                }}
+              >
+                {!isOwn && <div style={styles.username}>{msg.username}</div>}
+                {msg.file ? (
+                  <FilePreview file={msg.file} />
+                ) : (
+                  <div style={styles.text}>{msg.text}</div>
+                )}
+                <div style={styles.msgInfo}>
+                  <span>{formatTime(msg.timestamp)}</span>
+                  {isOwn && <span style={styles.ticks}>✓✓</span>}
+                </div>
+              </div>
             </div>
-          </div>
-        );
-      })}
-      <div ref={bottomRef} />
+          );
+        })}
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }
@@ -91,15 +96,24 @@ export default function MessageList({ messages, username }) {
 const styles = {
   container: {
     flex: 1,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    background: '#0e1621',
+    backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(43, 56, 78, 0.4) 1px, transparent 1px)',
+    backgroundSize: '24px 24px',
+  },
+  messages: {
+    flex: 1,
     overflowY: 'auto',
     padding: '20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '12px',
   },
   systemMessage: {
     textAlign: 'center',
-    color: '#666',
+    color: 'var(--text-secondary, #70798a)',
     fontSize: '13px',
     padding: '8px 0',
   },
@@ -107,13 +121,16 @@ const styles = {
     display: 'flex',
   },
   message: {
-    maxWidth: '70%',
+    maxWidth: '60%',
     padding: '10px 14px',
-    borderRadius: '16px',
+    borderRadius: '14px',
+    fontSize: '15px',
+    lineHeight: '1.4',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
   },
   username: {
     fontSize: '12px',
-    color: '#888',
+    color: 'var(--accent-color, #3390ec)',
     marginBottom: '4px',
     fontWeight: '600',
   },
@@ -121,12 +138,23 @@ const styles = {
     fontSize: '15px',
     lineHeight: '1.4',
     wordBreak: 'break-word',
+    color: '#ffffff',
   },
-  time: {
+  msgInfo: {
     fontSize: '11px',
-    color: 'rgba(255,255,255,0.5)',
-    marginTop: '4px',
-    textAlign: 'right',
+    color: 'rgba(255, 255, 255, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '4px',
+    marginTop: '6px',
+    userSelect: 'none',
+  },
+  ticks: {
+    color: '#53a6f3',
+    fontSize: '12px',
+    letterSpacing: '-2px',
+    marginRight: '2px',
   },
   fileImage: {
     maxWidth: '300px',

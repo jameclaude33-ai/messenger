@@ -41,12 +41,12 @@ export default function MessageInput({ onSend, onFileUpload, userId }) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Сообщение..."
+        placeholder="Написать сообщение..."
         style={styles.input}
         maxLength={1000}
       />
       <button type="submit" disabled={!text.trim()} style={styles.button}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style={{ marginLeft: '2px' }}>
           <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
         </svg>
       </button>
@@ -57,33 +57,35 @@ export default function MessageInput({ onSend, onFileUpload, userId }) {
 const styles = {
   form: {
     display: 'flex',
-    gap: '10px',
-    padding: '20px',
-    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-    background: '#171c29',
+    gap: '12px',
+    padding: '16px 20px',
+    background: 'var(--sidebar-bg, #171c29)',
+    borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
     alignItems: 'center',
   },
   input: {
     flex: 1,
-    padding: '14px 16px',
-    borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    background: '#171c29',
+    padding: '14px 18px',
+    borderRadius: '20px',
+    border: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+    background: 'var(--bg-color, #0f131c)',
     color: '#ffffff',
     fontSize: '15px',
     outline: 'none',
+    transition: 'border-color 0.2s ease',
   },
   button: {
-    width: '40px',
-    height: '40px',
+    width: '44px',
+    height: '44px',
     borderRadius: '50%',
     border: 'none',
-    background: '#3390ec',
+    background: 'var(--accent-color, #3390ec)',
     color: '#fff',
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    transition: 'background 0.2s',
   },
 };

@@ -9,6 +9,8 @@ export default function GlobalStyles() {
         --accent-color: #3390ec;
         --border-color: rgba(255, 255, 255, 0.08);
         --hover-bg: rgba(255, 255, 255, 0.05);
+        --message-bg: #1e2838;
+        --my-message-bg: #2b5278;
       }
 
       * {
@@ -35,6 +37,10 @@ export default function GlobalStyles() {
 
       input, textarea, button {
         font-size: 16px !important;
+      }
+
+      input:focus {
+        border-color: var(--accent-color) !important;
       }
 
       @media (max-width: 768px) {
