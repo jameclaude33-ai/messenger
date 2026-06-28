@@ -25,12 +25,6 @@ export default function CallModal({
   }, [localStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-  }, [remoteStream]);
-
-  useEffect(() => {
     if (localStream) {
       const videoTrack = localStream.getVideoTracks()[0];
       setVideoEnabled(!!videoTrack && videoTrack.enabled);
@@ -39,6 +33,14 @@ export default function CallModal({
 
   const hasVideo = localStream && localStream.getVideoTracks().length > 0;
   const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
+  const isConnected = callState === 'connected';
+
+  useEffect(() => {
+    if (isConnected && remoteStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+    }
+  }, [isConnected, remoteStream]);
 
   const handleToggleVideo = () => {
     if (localStream) {
@@ -67,25 +69,21 @@ export default function CallModal({
   return (
     <div style={styles.overlay}>
       <div style={styles.modal}>
-        {(hasVideo || hasRemoteVideo) && (
+        <video
+          ref={remoteVideoRef}
+          autoPlay
+          playsInline
+          style={isConnected && hasRemoteVideo ? styles.remoteVideo : { position: 'absolute', width: 0, height: 0, opacity: 0 }}
+        />
+        {isConnected && hasVideo && (
           <div style={styles.videoContainer}>
-            {hasRemoteVideo && (
-              <video
-                ref={remoteVideoRef}
-                autoPlay
-                playsInline
-                style={styles.remoteVideo}
-              />
-            )}
-            {hasVideo && (
-              <video
-                ref={localVideoRef}
-                autoPlay
-                playsInline
-                muted
-                style={styles.localVideo}
-              />
-            )}
+            <video
+              ref={localVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={styles.localVideo}
+            />
           </div>
         )}
 
