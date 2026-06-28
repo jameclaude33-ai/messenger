@@ -26,13 +26,8 @@ export default function UserList({ users, username, onCall, onVideoCall, onChat 
                     💬
                   </button>
                 )}
-                {onCall && (
-                  <button onClick={() => onCall(user.username)} style={styles.callBtn} title="Аудио звонок">
-                    📞
-                  </button>
-                )}
                 {onVideoCall && (
-                  <button onClick={() => onVideoCall(user.username)} style={styles.callBtn} title="Видео звонок">
+                  <button onClick={() => onVideoCall(user.username)} style={styles.callBtn} title="Позвонить">
                     📹
                   </button>
                 )}

@@ -105,11 +105,8 @@ export default function CallModal({
         <div style={styles.actions}>
           {callState === 'ringing' && (
             <>
-              <button onClick={() => onAccept(incomingData, true)} style={{ ...styles.button, ...styles.accept }} title="С видео">
-                Видео
-              </button>
-              <button onClick={() => onAccept(incomingData, false)} style={{ ...styles.button, ...styles.accept }} title="Только аудио">
-                Аудио
+              <button onClick={() => onAccept(incomingData, true)} style={{ ...styles.button, ...styles.accept }}>
+                Принять
               </button>
               <button onClick={onReject} style={{ ...styles.button, ...styles.reject }}>
                 Отклонить

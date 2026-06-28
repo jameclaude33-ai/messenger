@@ -498,6 +498,10 @@ export function useP2PCall(socket, username) {
     });
 
     socket.on('call:accepted', async (data) => {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
       setCallState('connected');
       callerSocketId.current = data.responderSocketId;
       if (peerConnection.current) {

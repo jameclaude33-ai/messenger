@@ -244,7 +244,7 @@ export default function Home() {
       {callState === 'ringing' && incomingCall && (
         <div style={styles.incomingCallBanner}>
           <span>{incomingCall.callerUsername} звонит...</span>
-          <button onClick={() => acceptCall(incomingCall)} style={styles.acceptBtn}>Принять</button>
+          <button onClick={() => acceptCall(incomingCall, true)} style={styles.acceptBtn}>Принять</button>
           <button onClick={() => { rejectCall(incomingCall); setIncomingCall(null); }} style={styles.rejectBtn}>Отклонить</button>
         </div>
       )}
