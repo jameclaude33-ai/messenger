@@ -33,15 +33,21 @@ router.post('/unsubscribe', authMiddleware, (req, res) => {
 });
 
 router.post('/test', authMiddleware, async (req, res) => {
+  const { sendPushNotification: sendPush, getAllSubscribedUsernames, hasSubscription } = require('../utils/push');
+  const username = req.user.username;
+  const allSubs = getAllSubscribedUsernames();
+  const hasSub = hasSubscription(username);
+  console.log(`[PUSH-TEST] User: ${username}, hasSubscription: ${hasSub}, allSubscribed: [${allSubs.join(', ')}]`);
   try {
-    await sendPushNotification(req.user.username, {
+    await sendPush(username, {
       title: 'Test Push',
       body: 'Push уведомления работают!',
       url: '/',
     });
-    res.json({ ok: true, message: 'Push sent' });
+    res.json({ ok: true, message: 'Push sent', username, hasSub, allSubs });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[PUSH-TEST] Error:', err);
+    res.status(500).json({ error: err.message, username, hasSub, allSubs });
   }
 });
 
