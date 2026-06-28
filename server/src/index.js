@@ -287,28 +287,8 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const callerCall = activeCalls.get(callerUsername);
-    if (callerCall && Date.now() - callerCall.at < 30000) {
-      socket.emit('call:error', { message: 'Вы уже в звонке' });
-      return;
-    }
     activeCalls.delete(callerUsername);
-
-    const targetCall = activeCalls.get(data.targetUsername);
-    if (targetCall) {
-      if (Date.now() - targetCall.at > 30000) {
-        activeCalls.delete(data.targetUsername);
-      } else if (targetCall.peer === callerUsername) {
-        activeCalls.delete(data.targetUsername);
-        const tsid = targetSockets.values().next().value;
-        io.to(tsid).emit('call:ended', { username: callerUsername });
-        socket.emit('call:ended', { username: data.targetUsername });
-        return;
-      } else {
-        socket.emit('call:busy', { username: data.targetUsername });
-        return;
-      }
-    }
+    activeCalls.delete(data.targetUsername);
 
     activeCalls.set(callerUsername, { peer: data.targetUsername, at: Date.now() });
     const targetSocketId = targetSockets.values().next().value;
