@@ -107,14 +107,15 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
   const decryptMessage_ = useCallback(async (msg) => {
     if (!msg.encrypted || !e2eKeyPair) return msg;
     try {
-      const sharedKey = await getSharedKey(e2eKeyPair, msg.from, token);
+      const otherUser = msg.from === user?.username ? msg.to : msg.from;
+      const sharedKey = await getSharedKey(e2eKeyPair, otherUser, token);
       if (!sharedKey) return { ...msg, text: '[Не удалось расшифровать]' };
       const text = await decryptMessage(sharedKey, msg.ciphertext, msg.iv);
       return { ...msg, text };
     } catch {
       return { ...msg, text: '[Ошибка расшифровки]' };
     }
-  }, [e2eKeyPair, token]);
+  }, [e2eKeyPair, token, user]);
 
   return {
     chats,
