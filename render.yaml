@@ -14,6 +14,10 @@ services:
         generateValue: true
       - key: RESEND_API_KEY
         value: re_GmjjZNDq_JRcmAmEnro4crgUKbyGBJNZc
+      - key: SUPABASE_URL
+        value: https://rtwbihaputyimjxrdlxi.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0d2JpaGFwdXR5aW1qeHJkbHhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI2OTAyNzcsImV4cCI6MjA5ODI2NjI3N30.L9hD151jnwnnxyLtZkK9j2ybTg1vcDyHSAQkwHlAk7g
     healthCheckPath: /api/health
     disk:
       name: messenger-data
