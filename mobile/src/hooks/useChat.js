@@ -27,9 +27,9 @@ export function useAuth() {
     }
   }
 
-  async function register(username, password) {
+  async function register(username, password, displayName) {
     const { register: apiRegister } = await import('../services/api');
-    const data = await apiRegister(username, password);
+    const data = await apiRegister(username, password, displayName);
     const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
     await AsyncStorage.setItem('messenger_token', data.token);
     await AsyncStorage.setItem('messenger_user', JSON.stringify(data.user));

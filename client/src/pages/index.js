@@ -140,6 +140,7 @@ export default function Home() {
       <div style={styles.chat}>
         <ChatHeader
           username={user.username}
+          displayName={user.displayName}
           connected={connected}
           e2eReady={e2eReady}
           onDisconnect={logout}

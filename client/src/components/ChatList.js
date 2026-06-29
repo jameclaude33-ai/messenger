@@ -41,9 +41,9 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
             <div style={styles.avatar}>
               {chat.otherUser[0].toUpperCase()}
             </div>
-            <div style={styles.info}>
+              <div style={styles.info}>
               <div style={styles.nameRow}>
-                <span style={styles.name}>{chat.otherUser}</span>
+                <span style={styles.name}>@{chat.otherUser}</span>
                 {chat.lastMessage && (
                   <span style={styles.time}>
                     {new Date(chat.lastMessage.timestamp).toLocaleTimeString('ru-RU', {

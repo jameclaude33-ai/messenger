@@ -76,10 +76,12 @@ io.on('connection', (socket) => {
   socketToUser.set(socket.id, username);
 
   if (isNewUser) {
+    const fullUser = userModel.getUser(username);
     users.set(username, {
       id: username,
       userId: socket.user.id,
       username: username,
+      displayName: fullUser?.displayName || username,
       joinedAt: new Date(),
     });
     userModel.setOnline(username);

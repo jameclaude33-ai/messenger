@@ -13,6 +13,7 @@ import {
 export default function AuthScreen({ onLogin, onRegister }) {
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +25,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       if (mode === 'login') {
         await onLogin(username, password);
       } else {
-        await onRegister(username, password);
+        await onRegister(username, password, displayName || username);
       }
     } catch (err) {
       setError(err.message);
@@ -46,14 +47,25 @@ export default function AuthScreen({ onLogin, onRegister }) {
 
         <TextInput
           style={styles.input}
-          placeholder="Имя пользователя"
+          placeholder={mode === 'login' ? 'Тег или email' : '@username (уникальный тег)'}
           placeholderTextColor="#666"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={(val) => setUsername(val.replace(/[^a-zA-Z0-9_@.]/g, ''))}
           autoCapitalize="none"
-          minLength={2}
+          minLength={3}
           maxLength={20}
         />
+
+        {mode === 'register' && (
+          <TextInput
+            style={styles.input}
+            placeholder="Имя (отображается)"
+            placeholderTextColor="#666"
+            value={displayName}
+            onChangeText={setDisplayName}
+            maxLength={30}
+          />
+        )}
 
         <TextInput
           style={styles.input}

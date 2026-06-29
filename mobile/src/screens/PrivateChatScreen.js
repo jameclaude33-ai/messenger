@@ -90,7 +90,7 @@ export default function PrivateChatScreen({ messages, username, otherUser, onSen
           <Text style={styles.avatarText}>{otherUser[0].toUpperCase()}</Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{otherUser}</Text>
+          <Text style={styles.headerName}>@{otherUser}</Text>
           <Text style={styles.e2e}>🔒 E2E</Text>
         </View>
       </View>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export default function ChatHeader({ username, connected, e2eReady, onDisconnect, onToggleSidebar }) {
+export default function ChatHeader({ username, displayName, connected, e2eReady, onDisconnect, onToggleSidebar }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -42,7 +42,10 @@ export default function ChatHeader({ username, connected, e2eReady, onDisconnect
         )}
       </div>
       <div style={styles.right}>
-        <span style={styles.username}>{username}</span>
+        <div style={styles.userBlock}>
+          <span style={styles.displayName}>{displayName || username}</span>
+          <span style={styles.userTag}>@{username}</span>
+        </div>
         <button onClick={onDisconnect} style={styles.button}>Выйти</button>
       </div>
     </div>
@@ -97,8 +100,18 @@ const styles = {
     gap: '12px',
     flexShrink: 0,
   },
-  username: {
+  userBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+  },
+  displayName: {
     fontSize: '14px',
+    color: '#fff',
+    fontWeight: '600',
+  },
+  userTag: {
+    fontSize: '11px',
     color: '#70798a',
   },
   button: {

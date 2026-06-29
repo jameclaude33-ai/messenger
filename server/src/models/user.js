@@ -45,7 +45,7 @@ function saveToDisk() {
 
 loadFromDisk();
 
-async function register(username, password, email) {
+async function register(username, password, email, displayName) {
   if (users.has(username)) {
     throw new Error('Username already exists');
   }
@@ -53,6 +53,7 @@ async function register(username, password, email) {
   const user = {
     id: uuidv4(),
     username,
+    displayName: displayName || username,
     email: email ? email.toLowerCase() : null,
     password: hashedPassword,
     createdAt: new Date().toISOString(),
@@ -62,7 +63,7 @@ async function register(username, password, email) {
   users.set(username, user);
   if (email) emailToUsername.set(email.toLowerCase(), username);
   saveToDisk();
-  return { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt };
+  return { id: user.id, username: user.username, displayName: user.displayName, email: user.email, createdAt: user.createdAt };
 }
 
 async function login(usernameOrEmail, password) {
@@ -83,7 +84,7 @@ async function login(usernameOrEmail, password) {
   user.online = true;
   user.lastSeen = new Date().toISOString();
   saveToDisk();
-  return { id: user.id, username: user.username, email: user.email };
+  return { id: user.id, username: user.username, displayName: user.displayName || user.username, email: user.email };
 }
 
 function findByEmail(email) {
@@ -112,16 +113,23 @@ function setOffline(username) {
 function getUser(username) {
   const user = users.get(username);
   if (!user) return null;
-  return { id: user.id, username: user.username, email: user.email, online: user.online, lastSeen: user.lastSeen };
+  return { id: user.id, username: user.username, displayName: user.displayName || user.username, email: user.email, online: user.online, lastSeen: user.lastSeen };
 }
 
 function getAllUsers() {
   return Array.from(users.values()).map(u => ({
     id: u.id,
     username: u.username,
+    displayName: u.displayName || u.username,
     online: u.online,
     lastSeen: u.lastSeen,
   }));
 }
 
-module.exports = { register, login, findByEmail, setOnline, setOffline, getUser, getAllUsers };
+function getUserByTag(tag) {
+  const user = users.get(tag);
+  if (!user) return null;
+  return { id: user.id, username: user.username, displayName: user.displayName || user.username, online: user.online };
+}
+
+module.exports = { register, login, findByEmail, setOnline, setOffline, getUser, getAllUsers, getUserByTag };

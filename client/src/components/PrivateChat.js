@@ -59,7 +59,7 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
         <button onClick={onBack} style={styles.backBtn}>←</button>
         <div style={styles.avatar}>{otherUser[0].toUpperCase()}</div>
         <div>
-          <div style={styles.name}>{otherUser}</div>
+          <div style={styles.name}>@{otherUser}</div>
           <div style={styles.e2e}>🔒 E2E</div>
         </div>
       </div>

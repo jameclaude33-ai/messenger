@@ -14,6 +14,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
+  const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [devCode, setDevCode] = useState('');
@@ -92,6 +93,16 @@ export default function AuthScreen({ onLogin, onRegister }) {
       triggerShake();
       return;
     }
+    if (username.length < 3) {
+      setError('Тег минимум 3 символа');
+      triggerShake();
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError('Тег: только латиница, цифры и _');
+      triggerShake();
+      return;
+    }
     if (password.length < 6) {
       setError('Пароль минимум 6 символов');
       triggerShake();
@@ -103,7 +114,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, email, code: code.join('') }),
+        body: JSON.stringify({ tag: username, displayName: displayName || username, password, email, code: code.join('') }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -276,16 +287,28 @@ export default function AuthScreen({ onLogin, onRegister }) {
         {mode === 'register' && step === 3 && (
           <div style={styles.step}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Имя пользователя</label>
+              <label style={styles.label}>Имя (отображается)</label>
               <input
                 type="text"
-                placeholder="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Как вас зовут?"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
                 style={styles.input}
-                minLength={2}
+                maxLength={30}
+              />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Тег (уникальный)</label>
+              <input
+                type="text"
+                placeholder="@username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
+                style={styles.input}
+                minLength={3}
                 maxLength={20}
               />
+              <span style={styles.hintSmall}>Латиница, цифры и _ — для поиска и добавления в чат</span>
             </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>Пароль</label>
@@ -463,6 +486,12 @@ const styles = {
     color: '#70798a',
     marginTop: '8px',
     lineHeight: '1.4',
+  },
+  hintSmall: {
+    fontSize: '11px',
+    color: '#70798a',
+    marginTop: '4px',
+    display: 'block',
   },
   link: {
     background: 'none',

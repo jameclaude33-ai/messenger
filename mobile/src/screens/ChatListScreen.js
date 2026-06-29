@@ -26,7 +26,7 @@ export default function ChatListScreen({ chats, username, onSelectChat, onLogout
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.nameRow}>
-          <Text style={styles.chatName}>{item.otherUser}</Text>
+          <Text style={styles.chatName}>@{item.otherUser}</Text>
           {item.lastMessage && (
             <Text style={styles.chatTime}>
               {new Date(item.lastMessage.timestamp).toLocaleTimeString('ru-RU', {
