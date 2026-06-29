@@ -1,16 +1,10 @@
 import GlobalStyles from '../styles/global';
-import { useAuth, useSocket, useE2E, useChat, useGroups, useP2PCall } from '../hooks/useChat';
+import { useAuth, useSocket, useE2E, useChat, useP2PCall } from '../hooks/useChat';
 import { usePrivateChats } from '../hooks/usePrivateChat';
 import AuthScreen from '../components/AuthScreen';
 import ChatHeader from '../components/ChatHeader';
-import UserList from '../components/UserList';
-import GroupList from '../components/GroupList';
 import ChatList from '../components/ChatList';
 import PrivateChat from '../components/PrivateChat';
-import GroupChat from '../components/GroupChat';
-import MessageList from '../components/MessageList';
-import MessageInput from '../components/MessageInput';
-import TypingIndicator from '../components/TypingIndicator';
 import CallModal from '../components/CallModal';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -18,18 +12,7 @@ export default function Home() {
   const { user, token, loading, register, login, logout } = useAuth();
   const { socket, connected } = useSocket(token);
   const { keyPair: e2eKeyPair, ready: e2eReady } = useE2E(socket, token);
-  const { messages, users, joined, join, sendMessage, sendFileMessage, typingUsers } = useChat(socket, e2eKeyPair, e2eReady, user);
-  const {
-    groups,
-    activeGroupId,
-    groupMessages,
-    createGroup,
-    joinGroup,
-    leaveGroup,
-    selectGroup,
-    sendGroupMessage,
-    deselectGroup,
-  } = useGroups(socket);
+  const { joined, join } = useChat(socket, e2eKeyPair, e2eReady, user);
   const {
     chats,
     activeChat,
@@ -54,12 +37,9 @@ export default function Home() {
     stopScreenShare,
     callerSocketId,
   } = useP2PCall(socket, user?.username);
-  const [sidebarTab, setSidebarTab] = useState('chats');
   const [showSidebar, setShowSidebar] = useState(true);
   const [incomingCall, setIncomingCall] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
-
-  const activeGroup = groups.find((g) => g.id === activeGroupId);
 
   useEffect(() => {
     if (user) {
@@ -105,11 +85,6 @@ export default function Home() {
     if (isMobile) setShowSidebar(false);
   }, [openChat, isMobile]);
 
-  const handleSelectGroup = useCallback((id) => {
-    selectGroup(id);
-    if (isMobile) setShowSidebar(false);
-  }, [selectGroup, isMobile]);
-
   if (loading) {
     return (
       <>
@@ -130,47 +105,7 @@ export default function Home() {
 
   const sidebarContent = (
     <div style={styles.sidebarInner}>
-      <div style={styles.tabs}>
-        <button
-          onClick={() => setSidebarTab('chats')}
-          style={{
-            ...styles.tab,
-            borderBottom: sidebarTab === 'chats' ? '2px solid #4f46e5' : '2px solid transparent',
-            color: sidebarTab === 'chats' ? '#fff' : '#666',
-          }}
-        >
-          Чаты
-        </button>
-        <button
-          onClick={() => setSidebarTab('users')}
-          style={{
-            ...styles.tab,
-            borderBottom: sidebarTab === 'users' ? '2px solid #4f46e5' : '2px solid transparent',
-            color: sidebarTab === 'users' ? '#fff' : '#666',
-          }}
-        >
-          Люди
-        </button>
-        <button
-          onClick={() => setSidebarTab('groups')}
-          style={{
-            ...styles.tab,
-            borderBottom: sidebarTab === 'groups' ? '2px solid #4f46e5' : '2px solid transparent',
-            color: sidebarTab === 'groups' ? '#fff' : '#666',
-          }}
-        >
-          Группы
-        </button>
-      </div>
-      {sidebarTab === 'chats' && (
-        <ChatList chats={chats} activeChat={activeChat} onSelect={handleOpenChat} username={user.username} />
-      )}
-      {sidebarTab === 'users' && (
-        <UserList users={users} username={user.username} onCall={(u) => initiateCall(u, false)} onVideoCall={(u) => initiateCall(u, true)} onChat={handleOpenChat} />
-      )}
-      {sidebarTab === 'groups' && (
-        <GroupList groups={groups} onJoin={joinGroup} onCreate={createGroup} activeGroupId={activeGroupId} onSelect={handleSelectGroup} />
-      )}
+      <ChatList chats={chats} activeChat={activeChat} onSelect={handleOpenChat} username={user.username} />
     </div>
   );
 
@@ -190,30 +125,12 @@ export default function Home() {
         />
       );
     }
-    if (activeGroup) {
-      return (
-        <GroupChat
-          group={activeGroup}
-          messages={groupMessages}
-          username={user.username}
-          onSendMessage={sendGroupMessage}
-          onLeave={() => leaveGroup(activeGroupId)}
-          onBack={deselectGroup}
-        />
-      );
-    }
     return (
-      <>
-        <MessageList messages={messages} username={user.username} />
-        <TypingIndicator typingUsers={typingUsers} currentUsername={user.username} />
-        <MessageInput
-          onSend={sendMessage}
-          onFileUpload={sendFileMessage}
-          userId={user.username}
-          onTyping={() => socket?.emit('user:typing')}
-          onStopTyping={() => socket?.emit('user:stopTyping')}
-        />
-      </>
+      <div style={styles.welcome}>
+        <div style={styles.welcomeIcon}>💬</div>
+        <h2 style={styles.welcomeTitle}>Messenger</h2>
+        <p style={styles.welcomeText}>Выберите чат или начните новый</p>
+      </div>
     );
   };
 
@@ -329,26 +246,33 @@ const styles = {
     background: 'rgba(0,0,0,0.5)',
     zIndex: 199,
   },
-  tabs: {
-    display: 'flex',
-    padding: '10px 20px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-  },
-  tab: {
-    flex: 1,
-    padding: '8px 16px',
-    background: 'transparent',
-    border: 'none',
-    fontSize: '14px',
-    cursor: 'pointer',
-    transition: 'color 0.2s',
-  },
   main: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     minWidth: 0,
+  },
+  welcome: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '12px',
+    background: '#0e1621',
+  },
+  welcomeIcon: {
+    fontSize: '48px',
+  },
+  welcomeTitle: {
+    fontSize: '22px',
+    fontWeight: '600',
+    color: '#fff',
+  },
+  welcomeText: {
+    fontSize: '14px',
+    color: '#70798a',
   },
   loading: {
     display: 'flex',

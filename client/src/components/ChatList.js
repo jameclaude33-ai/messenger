@@ -1,9 +1,33 @@
+import { useState } from 'react';
+
 export default function ChatList({ chats, activeChat, onSelect, username }) {
+  const [newChat, setNewChat] = useState('');
+
+  const handleStartChat = (e) => {
+    e.preventDefault();
+    const target = newChat.trim();
+    if (target && target !== username) {
+      onSelect(target);
+      setNewChat('');
+    }
+  };
+
   return (
     <div style={styles.container}>
+      <form onSubmit={handleStartChat} style={styles.searchForm}>
+        <input
+          style={styles.searchInput}
+          placeholder="Новый чат — никнейм..."
+          value={newChat}
+          onChange={(e) => setNewChat(e.target.value)}
+        />
+        {newChat.trim() && newChat.trim() !== username && (
+          <button type="submit" style={styles.searchBtn}>→</button>
+        )}
+      </form>
       <div style={styles.list}>
-        {chats.length === 0 && (
-          <p style={styles.empty}>Нет чатов. Нажмите на пользователя чтобы начать.</p>
+        {chats.length === 0 && !newChat.trim() && (
+          <p style={styles.empty}>Нет чатов. Введите никнейм выше, чтобы начать.</p>
         )}
         {chats.map((chat) => (
           <div
@@ -51,6 +75,32 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
+  },
+  searchForm: {
+    display: 'flex',
+    gap: '8px',
+    padding: '12px 12px 4px',
+  },
+  searchInput: {
+    flex: 1,
+    padding: '10px 14px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: '#0f131c',
+    color: '#fff',
+    fontSize: '14px',
+    outline: 'none',
+  },
+  searchBtn: {
+    width: '38px',
+    height: '38px',
+    borderRadius: '12px',
+    border: 'none',
+    background: '#3390ec',
+    color: '#fff',
+    fontSize: '16px',
+    cursor: 'pointer',
+    flexShrink: 0,
   },
   list: {
     flex: 1,
