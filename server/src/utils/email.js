@@ -38,7 +38,7 @@ async function sendViaResend(email, code) {
       html: buildHtml(code),
     });
     if (error) {
-      console.error('[Resend] Error:', error.message || error);
+      console.error('[Resend] Error:', JSON.stringify(error));
       return null;
     }
     return { ok: true };
@@ -75,12 +75,16 @@ async function sendVerificationCode(email) {
   const expiresAt = Date.now() + 10 * 60 * 1000;
   codes.set(email.toLowerCase(), { code, expiresAt, attempts: 0 });
 
-  // Try Resend first, then SMTP
-  const result = await sendViaResend(email, code) || await sendViaSmtp(email, code);
+  try {
+    // Try Resend first, then SMTP
+    const result = await sendViaResend(email, code) || await sendViaSmtp(email, code);
 
-  if (result) {
-    console.log(`[Email] Code sent to ${email}`);
-    return { ok: true };
+    if (result) {
+      console.log(`[Email] Code sent to ${email}`);
+      return { ok: true };
+    }
+  } catch (err) {
+    console.error('[Email] Send failed:', err.message);
   }
 
   // Dev fallback — log code to console and return to client
