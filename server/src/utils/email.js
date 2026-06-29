@@ -1,7 +1,5 @@
-const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const SMTP_HOST = process.env.SMTP_HOST || '';
 const SMTP_PORT = process.env.SMTP_PORT || '587';
 const SMTP_USER = process.env.SMTP_USER || '';
@@ -49,43 +47,19 @@ async function sendViaSmtp(email, code) {
   }
 }
 
-async function sendViaResend(email, code) {
-  if (!RESEND_API_KEY) return false;
-  try {
-    const resend = new Resend(RESEND_API_KEY);
-    const { error } = await resend.emails.send({
-      from: 'Messenger <onboarding@resend.dev>',
-      to: email,
-      subject: 'Код подтверждения — Messenger',
-      html: buildHtml(code),
-    });
-    if (error) {
-      console.error('[Resend] Error:', error.message || JSON.stringify(error));
-      return false;
-    }
-    return true;
-  } catch (err) {
-    console.error('[Resend] Exception:', err.message);
-    return false;
-  }
-}
-
 async function sendVerificationCode(email) {
   const code = generateCode();
   const expiresAt = Date.now() + 10 * 60 * 1000;
   codes.set(email.toLowerCase(), { code, expiresAt, attempts: 0 });
 
-  // Try sending via available providers
-  let sent = false;
-  try { sent = await sendViaResend(email, code); } catch (e) { /* ignore */ }
-  if (!sent) try { sent = await sendViaSmtp(email, code); } catch (e) { /* ignore */ }
-
+  // Try SMTP if configured
+  const sent = await sendViaSmtp(email, code);
   if (sent) {
-    console.log(`[Email] Code sent to ${email}`);
+    console.log(`[Email] Code sent to ${email} via SMTP`);
     return { ok: true };
   }
 
-  // Dev fallback
+  // Dev fallback — return code directly
   console.log(`[DEV] Code for ${email}: ${code}`);
   return { ok: true, devCode: code };
 }
