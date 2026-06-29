@@ -31,19 +31,19 @@ async function sendViaResend(email, code) {
   if (!RESEND_API_KEY) return null;
   try {
     const resend = new Resend(RESEND_API_KEY);
-    const { data, error } = await resend.emails.send({
+    const result = await resend.emails.send({
       from: 'Messenger <onboarding@resend.dev>',
       to: email,
       subject: 'Код подтверждения — Messenger',
       html: buildHtml(code),
     });
-    if (error) {
-      console.error('[Resend] Error:', JSON.stringify(error));
+    if (result.error) {
+      console.error('[Resend] Error:', JSON.stringify(result.error));
       return null;
     }
     return { ok: true };
   } catch (err) {
-    console.error('[Resend] Failed:', err.message);
+    console.error('[Resend] Exception:', err.message);
     return null;
   }
 }
@@ -75,16 +75,26 @@ async function sendVerificationCode(email) {
   const expiresAt = Date.now() + 10 * 60 * 1000;
   codes.set(email.toLowerCase(), { code, expiresAt, attempts: 0 });
 
+  let sent = false;
   try {
-    // Try Resend first, then SMTP
-    const result = await sendViaResend(email, code) || await sendViaSmtp(email, code);
+    const result = await sendViaResend(email, code);
+    if (result) sent = true;
+  } catch (e) {
+    console.error('[Resend] Exception in sendVerificationCode:', e.message);
+  }
 
-    if (result) {
-      console.log(`[Email] Code sent to ${email}`);
-      return { ok: true };
+  if (!sent) {
+    try {
+      const result = await sendViaSmtp(email, code);
+      if (result) sent = true;
+    } catch (e) {
+      console.error('[SMTP] Exception in sendVerificationCode:', e.message);
     }
-  } catch (err) {
-    console.error('[Email] Send failed:', err.message);
+  }
+
+  if (sent) {
+    console.log(`[Email] Code sent to ${email}`);
+    return { ok: true };
   }
 
   // Dev fallback — log code to console and return to client
