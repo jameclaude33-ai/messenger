@@ -434,7 +434,7 @@ io.on('connection', (socket) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', users: users.size, timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', users: users.size, timestamp: new Date().toISOString(), version: 'v3-no-resend' });
 });
 
 if (process.env.NODE_ENV === 'production') {
