@@ -4,7 +4,6 @@ import FileUpload from './FileUpload';
 export default function MessageInput({ onSend, onFileUpload, userId, onTyping, onStopTyping }) {
   const [text, setText] = useState('');
   const inputRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -12,18 +11,11 @@ export default function MessageInput({ onSend, onFileUpload, userId, onTyping, o
 
   const handleTyping = useCallback(() => {
     if (onTyping) onTyping();
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    if (onStopTyping) {
-      typingTimeoutRef.current = setTimeout(() => {
-        onStopTyping();
-      }, 2000);
-    }
-  }, [onTyping, onStopTyping]);
+  }, [onTyping]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (text.trim()) {
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (onStopTyping) onStopTyping();
       onSend(text.trim());
       setText('');
@@ -31,8 +23,13 @@ export default function MessageInput({ onSend, onFileUpload, userId, onTyping, o
   };
 
   const handleChange = (e) => {
-    setText(e.target.value);
-    handleTyping();
+    const val = e.target.value;
+    setText(val);
+    if (val.trim()) {
+      handleTyping();
+    } else if (onStopTyping) {
+      onStopTyping();
+    }
   };
 
   const handleKeyDown = (e) => {

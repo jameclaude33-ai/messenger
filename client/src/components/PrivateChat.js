@@ -5,7 +5,6 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const listRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!decryptMessage || !messages.length) {
@@ -28,17 +27,10 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
 
   const handleTyping = useCallback(() => {
     if (onTyping) onTyping();
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    if (onStopTyping) {
-      typingTimeoutRef.current = setTimeout(() => {
-        onStopTyping();
-      }, 2000);
-    }
-  }, [onTyping, onStopTyping]);
+  }, [onTyping]);
 
   const handleSend = () => {
     if (!text.trim()) return;
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (onStopTyping) onStopTyping();
     onSend(text);
     setText('');
@@ -52,8 +44,13 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
   };
 
   const handleChange = (e) => {
-    setText(e.target.value);
-    handleTyping();
+    const val = e.target.value;
+    setText(val);
+    if (val.trim()) {
+      handleTyping();
+    } else if (onStopTyping) {
+      onStopTyping();
+    }
   };
 
   return (
