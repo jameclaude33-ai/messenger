@@ -38,18 +38,32 @@ export default function CallModal({
   const hasRemoteVideo = remoteStream && remoteStream.getVideoTracks().length > 0;
   const isConnected = callState === 'connected';
 
+  // Separate ref for audio-only playback (hidden <audio> element)
+  const remoteAudioRef = useRef(null);
+
   useEffect(() => {
-    if (isConnected && remoteStream && remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch(() => {});
-      remoteStream.onaddtrack = () => {
+    if (isConnected && remoteStream) {
+      // Always attach to video element for video calls
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream;
+        remoteVideoRef.current.play().catch(() => {});
+      }
+      // Also attach to audio element for audio-only calls
+      if (remoteAudioRef.current && !hasRemoteVideo) {
+        remoteAudioRef.current.srcObject = remoteStream;
+        remoteAudioRef.current.play().catch(() => {});
+      }
+      // Detect track replacement (screen sharing)
+      const handleTrackChange = () => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = new MediaStream(remoteStream.getTracks());
           remoteVideoRef.current.play().catch(() => {});
         }
       };
+      remoteStream.onaddtrack = handleTrackChange;
+      remoteStream.onremovetrack = handleTrackChange;
     }
-  }, [isConnected, remoteStream]);
+  }, [isConnected, remoteStream, hasRemoteVideo]);
 
   const handleToggleVideo = () => {
     if (localStream) {
@@ -83,6 +97,12 @@ export default function CallModal({
           autoPlay
           playsInline
           style={isConnected && hasRemoteVideo ? styles.remoteVideo : { position: 'absolute', width: 0, height: 0, opacity: 0 }}
+        />
+        {/* Hidden audio element for audio-only calls */}
+        <audio
+          ref={remoteAudioRef}
+          autoPlay
+          style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
         />
         {isConnected && hasVideo && (
           <div style={styles.videoContainer}>

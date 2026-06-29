@@ -395,6 +395,14 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Screen share signaling — forward to peer
+  socket.on('call:screen-share', (data) => {
+    io.to(data.targetSocketId).emit('call:screen-share', {
+      active: data.active,
+      fromSocketId: socket.id,
+    });
+  });
+
   socket.on('disconnect', () => {
     const username = socketToUser.get(socket.id);
     if (username) {

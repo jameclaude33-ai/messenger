@@ -513,6 +513,8 @@ export function useP2PCall(socket, username) {
         await sender.replaceTrack(screenTrack);
       }
       setIsScreenSharing(true);
+      // Notify peer about screen share start
+      socket.emit('call:screen-share', { targetSocketId: callerSocketId.current, active: true });
       screenTrack.onended = () => {
         stopScreenShare();
       };
@@ -532,6 +534,8 @@ export function useP2PCall(socket, username) {
       screenStreamRef.current.getTracks().forEach(t => t.stop());
       screenStreamRef.current = null;
       setIsScreenSharing(false);
+      // Notify peer about screen share stop
+      socket.emit('call:screen-share', { targetSocketId: callerSocketId.current, active: false });
     } catch (err) {
       console.error('Stop screen share failed:', err);
     }
@@ -592,6 +596,12 @@ export function useP2PCall(socket, username) {
     socket.on('call:error', (data) => {
       console.error('Call error:', data.message);
       endCall();
+    });
+
+    // Screen share signal from peer — force video element refresh
+    socket.on('call:screen-share', (data) => {
+      // Trigger re-render by toggling remoteStream reference
+      setRemoteStream(prev => prev ? new MediaStream(prev.getTracks()) : prev);
     });
 
     return () => {
