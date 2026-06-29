@@ -26,7 +26,10 @@ export default function ChatListScreen({ chats, username, onSelectChat, onLogout
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.nameRow}>
-          <Text style={styles.chatName}>@{item.otherUser}</Text>
+          <View>
+            <Text style={styles.chatName}>{item.otherUserDisplayName || item.otherUser}</Text>
+            <Text style={styles.chatTag}>@{item.otherUser}</Text>
+          </View>
           {item.lastMessage && (
             <Text style={styles.chatTime}>
               {new Date(item.lastMessage.timestamp).toLocaleTimeString('ru-RU', {
@@ -184,6 +187,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  chatTag: {
+    color: '#70798a',
+    fontSize: 11,
   },
   chatTime: {
     color: '#70798a',

@@ -111,11 +111,13 @@ export default function Home() {
 
   const renderMain = () => {
     if (activeChat) {
+      const chatData = chats.find(c => c.otherUser === activeChat);
       return (
         <PrivateChat
           messages={privateMessages}
           username={user.username}
           otherUser={activeChat}
+          otherUserDisplayName={chatData?.otherUserDisplayName}
           onSend={sendPrivateMessage}
           onBack={closeChat}
           decryptMessage={decryptPrivateMessage}

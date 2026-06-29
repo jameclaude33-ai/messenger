@@ -53,6 +53,7 @@ export default function App() {
           messages={privateMessages}
           username={user.username}
           otherUser={activeChat}
+          otherUserDisplayName={chats.find(c => c.otherUser === activeChat)?.otherUserDisplayName}
           onSend={sendPrivateMessage}
           onBack={closeChat}
           decryptMessage={decryptMessage}

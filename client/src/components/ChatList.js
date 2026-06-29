@@ -17,7 +17,7 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
       <form onSubmit={handleStartChat} style={styles.searchForm}>
         <input
           style={styles.searchInput}
-          placeholder="Новый чат — никнейм..."
+          placeholder="Новый чат — @tag..."
           value={newChat}
           onChange={(e) => setNewChat(e.target.value)}
         />
@@ -43,7 +43,10 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
             </div>
               <div style={styles.info}>
               <div style={styles.nameRow}>
-                <span style={styles.name}>@{chat.otherUser}</span>
+                <div style={styles.nameBlock}>
+                  <span style={styles.name}>{chat.otherUserDisplayName || chat.otherUser}</span>
+                  <span style={styles.tag}>@{chat.otherUser}</span>
+                </div>
                 {chat.lastMessage && (
                   <span style={styles.time}>
                     {new Date(chat.lastMessage.timestamp).toLocaleTimeString('ru-RU', {
@@ -148,6 +151,14 @@ const styles = {
     fontSize: '14px',
     fontWeight: '600',
     color: '#ffffff',
+  },
+  nameBlock: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  tag: {
+    fontSize: '11px',
+    color: '#70798a',
   },
   time: {
     fontSize: '11px',

@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 
-export default function PrivateChatScreen({ messages, username, otherUser, onSend, onBack, decryptMessage, isTyping, onTyping, onStopTyping }) {
+export default function PrivateChatScreen({ messages, username, otherUser, otherUserDisplayName, onSend, onBack, decryptMessage, isTyping, onTyping, onStopTyping }) {
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const flatListRef = useRef(null);
@@ -90,7 +90,8 @@ export default function PrivateChatScreen({ messages, username, otherUser, onSen
           <Text style={styles.avatarText}>{otherUser[0].toUpperCase()}</Text>
         </View>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>@{otherUser}</Text>
+          <Text style={styles.headerName}>{otherUserDisplayName || otherUser}</Text>
+          <Text style={styles.headerTag}>@{otherUser}</Text>
           <Text style={styles.e2e}>🔒 E2E</Text>
         </View>
       </View>
@@ -171,6 +172,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
+  },
+  headerTag: {
+    color: '#70798a',
+    fontSize: 11,
   },
   e2e: {
     color: '#22c55e',

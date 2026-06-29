@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import TypingIndicator from './TypingIndicator';
 
-export default function PrivateChat({ messages, username, onSend, onBack, otherUser, decryptMessage, isTyping, onTyping, onStopTyping }) {
+export default function PrivateChat({ messages, username, onSend, onBack, otherUser, otherUserDisplayName, decryptMessage, isTyping, onTyping, onStopTyping }) {
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const listRef = useRef(null);
@@ -59,7 +59,8 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
         <button onClick={onBack} style={styles.backBtn}>←</button>
         <div style={styles.avatar}>{otherUser[0].toUpperCase()}</div>
         <div>
-          <div style={styles.name}>@{otherUser}</div>
+          <div style={styles.name}>{otherUserDisplayName || otherUser}</div>
+          <div style={styles.tag}>@{otherUser}</div>
           <div style={styles.e2e}>🔒 E2E</div>
         </div>
       </div>
@@ -143,6 +144,10 @@ const styles = {
     color: '#fff',
     fontSize: '15px',
     fontWeight: '600',
+  },
+  tag: {
+    color: '#70798a',
+    fontSize: '11px',
   },
   e2e: {
     color: '#22c55e',

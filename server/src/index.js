@@ -145,7 +145,11 @@ io.on('connection', (socket) => {
     const username = socketToUser.get(socket.id);
     if (!username) return;
     const chats = privateMsg.getChatsForUser(username);
-    socket.emit('private:chats', chats);
+    const enriched = chats.map((chat) => {
+      const otherUserData = userModel.getUser(chat.otherUser);
+      return { ...chat, otherUserDisplayName: otherUserData?.displayName || chat.otherUser };
+    });
+    socket.emit('private:chats', enriched);
   });
 
   socket.on('message:send', async (data) => {
