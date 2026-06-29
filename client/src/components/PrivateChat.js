@@ -24,7 +24,7 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [decryptedMessages]);
+  }, [decryptedMessages, isTyping]);
 
   const handleTyping = useCallback(() => {
     if (onTyping) onTyping();

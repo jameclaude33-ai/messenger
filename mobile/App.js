@@ -1,26 +1,26 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAuth, useE2E, useChat, useGroups } from './src/hooks/useChat';
+import { useAuth, useE2E, useChat } from './src/hooks/useChat';
+import { usePrivateChats } from './src/hooks/usePrivateChat';
 import AuthScreen from './src/screens/AuthScreen';
-import ChatScreen from './src/screens/ChatScreen';
-import GroupsScreen from './src/screens/GroupsScreen';
+import ChatListScreen from './src/screens/ChatListScreen';
+import PrivateChatScreen from './src/screens/PrivateChatScreen';
 
 export default function App() {
   const { user, token, loading, register, login, logout } = useAuth();
   const { keyPair: e2eKeyPair, ready: e2eReady } = useE2E(token);
-  const { messages, users, connected, joined, join, sendMessage } = useChat(token, e2eKeyPair, e2eReady);
+  const { joined, join } = useChat(token, e2eKeyPair, e2eReady);
   const {
-    groups,
-    activeGroupId,
-    groupMessages,
-    createGroup,
-    joinGroup,
-    leaveGroup,
-    selectGroup,
-    sendGroupMessage,
-    deselectGroup,
-  } = useGroups();
+    chats,
+    activeChat,
+    messages: privateMessages,
+    openChat,
+    closeChat,
+    sendPrivateMessage,
+    decryptMessage,
+    typingUsers,
+  } = usePrivateChats(token, e2eKeyPair, e2eReady, user?.username);
 
   useEffect(() => {
     if (user && token && !joined) {
@@ -45,21 +45,26 @@ export default function App() {
     );
   }
 
-  if (activeGroupId) {
+  if (activeChat) {
     return (
       <>
         <StatusBar style="light" />
-        <GroupsScreen
-          groups={groups}
-          activeGroupId={activeGroupId}
-          groupMessages={groupMessages}
+        <PrivateChatScreen
+          messages={privateMessages}
           username={user.username}
-          onCreate={createGroup}
-          onJoin={joinGroup}
-          onLeave={leaveGroup}
-          onSelect={selectGroup}
-          onSendMessage={sendGroupMessage}
-          onBack={deselectGroup}
+          otherUser={activeChat}
+          onSend={sendPrivateMessage}
+          onBack={closeChat}
+          decryptMessage={decryptMessage}
+          isTyping={Object.keys(typingUsers).length > 0}
+          onTyping={() => {
+            const socket = require('./src/services/socket').getSocket();
+            socket?.emit('private:typing', { to: activeChat });
+          }}
+          onStopTyping={() => {
+            const socket = require('./src/services/socket').getSocket();
+            socket?.emit('private:stopTyping', { to: activeChat });
+          }}
         />
       </>
     );
@@ -68,24 +73,17 @@ export default function App() {
   return (
     <>
       <StatusBar style="light" />
-      <View style={styles.container}>
-        <ChatScreen
-          messages={messages}
-          username={user.username}
-          onSend={sendMessage}
-          onLogout={logout}
-          e2eReady={e2eReady}
-        />
-      </View>
+      <ChatListScreen
+        chats={chats}
+        username={user.username}
+        onSelectChat={openChat}
+        onLogout={logout}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0f0f',
-  },
   loading: {
     flex: 1,
     backgroundColor: '#0f0f0f',

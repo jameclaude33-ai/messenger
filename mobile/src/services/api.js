@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://flavty.onrender.com';
 
 export async function register(username, password) {
   const res = await fetch(`${API_URL}/api/auth/register`, {

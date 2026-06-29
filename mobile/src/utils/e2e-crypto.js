@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
-const API_URL = 'http://localhost:3001';
+const API_URL = 'https://flavty.onrender.com';
 
 function getRandomBytes(length) {
   return Crypto.getRandomValues(new Uint8Array(length));
