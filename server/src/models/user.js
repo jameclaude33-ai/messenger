@@ -141,4 +141,35 @@ function getUserByTag(tag) {
   return { id: user.id, username: user.username, displayName: user.displayName || user.username, online: user.online };
 }
 
-module.exports = { register, login, findByEmail, setOnline, setOffline, getUser, getAllUsers, getUserByTag };
+async function findOrCreateFromSupabase(email, tag, displayName) {
+  const existingUsername = emailToUsername.get(email.toLowerCase());
+  if (existingUsername) {
+    const user = users.get(existingUsername);
+    if (user) {
+      return { id: user.id, username: user.username, displayName: user.displayName || user.username, email: user.email };
+    }
+  }
+
+  const username = tag || email.split('@')[0];
+  if (users.has(username)) {
+    const user = users.get(username);
+    return { id: user.id, username: user.username, displayName: user.displayName || user.username, email: user.email };
+  }
+
+  const user = {
+    id: uuidv4(),
+    username,
+    displayName: displayName || username,
+    email: email.toLowerCase(),
+    password: null,
+    createdAt: new Date().toISOString(),
+    online: false,
+    lastSeen: new Date().toISOString(),
+  };
+  users.set(username, user);
+  emailToUsername.set(email.toLowerCase(), username);
+  saveToDisk();
+  return { id: user.id, username: user.username, displayName: user.displayName, email: user.email };
+}
+
+module.exports = { register, login, findByEmail, setOnline, setOffline, getUser, getAllUsers, getUserByTag, findOrCreateFromSupabase };

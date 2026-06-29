@@ -17,7 +17,6 @@ export default function AuthScreen({ onLogin, onRegister }) {
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [devCode, setDevCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
@@ -45,7 +44,6 @@ export default function AuthScreen({ onLogin, onRegister }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setStep(2);
-      if (data.devCode) setDevCode(data.devCode);
       setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } catch (err) {
       setError(err.message);
@@ -55,7 +53,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
     }
   };
 
-  const handleCodeInput = (index, value) => {
+  const handleCodeInput = async (index, value) => {
     if (value.length > 1) value = value[value.length - 1];
     if (value && !/^\d$/.test(value)) return;
 
@@ -68,7 +66,25 @@ export default function AuthScreen({ onLogin, onRegister }) {
     }
 
     if (newCode.every(c => c) && index === 5) {
-      setTimeout(() => setStep(3), 200);
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch(`${API_URL}/api/auth/verify-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code: newCode.join('') }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setTimeout(() => setStep(3), 200);
+      } catch (err) {
+        setError(err.message || 'Неверный код');
+        triggerShake();
+        setCode(['', '', '', '', '', '']);
+        setTimeout(() => codeRefs.current[0]?.focus(), 100);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -78,12 +94,29 @@ export default function AuthScreen({ onLogin, onRegister }) {
     }
   };
 
-  const handleCodePaste = (e) => {
+  const handleCodePaste = async (e) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (pasted.length === 6) {
       setCode(pasted.split(''));
-      setTimeout(() => setStep(3), 200);
+      setLoading(true);
+      setError('');
+      try {
+        const res = await fetch(`${API_URL}/api/auth/verify-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, code: pasted }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setTimeout(() => setStep(3), 200);
+      } catch (err) {
+        setError(err.message || 'Неверный код');
+        triggerShake();
+        setCode(['', '', '', '', '', '']);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -201,11 +234,6 @@ export default function AuthScreen({ onLogin, onRegister }) {
               />
             </div>
             {error && <p style={styles.error}>{error}</p>}
-            {devCode && (
-              <div style={styles.devCode}>
-                Код: <strong>{devCode}</strong>
-              </div>
-            )}
             <button onClick={handleLogin} style={styles.button} disabled={loading}>
               {loading ? 'Загрузка...' : 'Войти'}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -269,11 +297,6 @@ export default function AuthScreen({ onLogin, onRegister }) {
                 />
               ))}
             </div>
-            {devCode && (
-              <div style={styles.devCode}>
-                Код: <strong>{devCode}</strong>
-              </div>
-            )}
             {error && <p style={styles.error}>{error}</p>}
             <p style={styles.hint}>Введите 6-значный код из письма</p>
             <div style={styles.centerLink}>
