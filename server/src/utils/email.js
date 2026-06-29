@@ -31,12 +31,16 @@ async function sendViaResend(email, code) {
   if (!RESEND_API_KEY) return null;
   try {
     const resend = new Resend(RESEND_API_KEY);
-    await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: 'Messenger <onboarding@resend.dev>',
       to: email,
       subject: 'Код подтверждения — Messenger',
       html: buildHtml(code),
     });
+    if (error) {
+      console.error('[Resend] Error:', error.message || error);
+      return null;
+    }
     return { ok: true };
   } catch (err) {
     console.error('[Resend] Failed:', err.message);
@@ -79,7 +83,7 @@ async function sendVerificationCode(email) {
     return { ok: true };
   }
 
-  // Dev fallback — log code to console
+  // Dev fallback — log code to console and return to client
   console.log(`[DEV] Verification code for ${email}: ${code}`);
   return { ok: true, devCode: code };
 }
