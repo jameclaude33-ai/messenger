@@ -6,6 +6,8 @@ const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
 const SMTP_FROM = process.env.SMTP_FROM || SMTP_USER || 'noreply@messenger.app';
 
+// Email v2 — no Resend, SMTP only, devCode fallback
+
 const codes = new Map();
 
 function generateCode() {
