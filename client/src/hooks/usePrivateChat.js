@@ -26,7 +26,7 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
       if (sender !== user?.username && document.hidden && Notification.permission === 'granted') {
         new Notification(sender || 'Messenger', {
           body: message.encrypted ? 'Зашифрованное сообщение' : (message.text || 'Новое сообщение'),
-          icon: '/favicon.ico',
+          icon: '/icon.png',
           tag: 'pm-' + message.id,
         });
       }

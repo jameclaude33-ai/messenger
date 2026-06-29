@@ -171,7 +171,7 @@ export function useChat(socket, e2eKeyPair, e2eReady, user) {
       if (!message.system && message.username !== user?.username && document.hidden && Notification.permission === 'granted') {
         new Notification(message.username || 'Messenger', {
           body: message.text || 'Новое сообщение',
-          icon: '/favicon.ico',
+          icon: '/icon.png',
           tag: 'msg-' + message.id,
         });
       }

@@ -54,8 +54,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || '',
-    icon: data.icon || '/icon.svg',
-    badge: '/icon.svg',
+    icon: data.icon || '/icon.png',
+    badge: '/icon.png',
     tag: 'messenger-message',
     renotify: true,
     vibrate: [200, 100, 200],
