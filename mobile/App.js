@@ -20,6 +20,7 @@ export default function App() {
     sendPrivateMessage,
     decryptMessage,
     typingUsers,
+    getUserStatus,
   } = usePrivateChats(token, e2eKeyPair, e2eReady, user?.username);
 
   useEffect(() => {
@@ -66,6 +67,7 @@ export default function App() {
             const socket = require('./src/services/socket').getSocket();
             socket?.emit('private:stopTyping', { to: activeChat });
           }}
+          userStatus={getUserStatus(activeChat)}
         />
       </>
     );
@@ -79,6 +81,7 @@ export default function App() {
         username={user.username}
         onSelectChat={openChat}
         onLogout={logout}
+        getUserStatus={getUserStatus}
       />
     </>
   );

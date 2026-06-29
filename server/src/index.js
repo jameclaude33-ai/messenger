@@ -147,9 +147,21 @@ io.on('connection', (socket) => {
     const chats = privateMsg.getChatsForUser(username);
     const enriched = chats.map((chat) => {
       const otherUserData = userModel.getUser(chat.otherUser);
-      return { ...chat, otherUserDisplayName: otherUserData?.displayName || chat.otherUser };
+      return {
+        ...chat,
+        otherUserDisplayName: otherUserData?.displayName || chat.otherUser,
+        otherUserOnline: otherUserData?.online || false,
+        otherUserLastSeen: otherUserData?.lastSeen || null,
+      };
     });
     socket.emit('private:chats', enriched);
+  });
+
+  socket.on('user:status', (targetUsername, callback) => {
+    const userData = userModel.getUser(targetUsername);
+    if (userData && typeof callback === 'function') {
+      callback({ online: userData.online, lastSeen: userData.lastSeen });
+    }
   });
 
   socket.on('message:send', async (data) => {
@@ -407,6 +419,7 @@ io.on('connection', (socket) => {
           userModel.setOffline(username);
           io.emit('user:stopTyping', username);
           io.emit('user:list', Array.from(users.values()));
+          io.emit('user:offline', { username, lastSeen: new Date().toISOString() });
           io.emit('message:new', {
             id: uuidv4(),
             system: true,

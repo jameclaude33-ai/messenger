@@ -6,6 +6,7 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
   const [typingUsers, setTypingUsers] = useState({});
+  const [userStatuses, setUserStatuses] = useState({});
 
   useEffect(() => {
     if (!socket) return;
@@ -56,6 +57,23 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
       });
     });
 
+    socket.on('user:offline', (data) => {
+      setUserStatuses((prev) => ({
+        ...prev,
+        [data.username]: { online: false, lastSeen: data.lastSeen },
+      }));
+    });
+
+    socket.on('user:list', (users) => {
+      setUserStatuses((prev) => {
+        const next = { ...prev };
+        users.forEach((u) => {
+          next[u.username] = { online: true, lastSeen: null };
+        });
+        return next;
+      });
+    });
+
     socket.emit('private:chats');
 
     return () => {
@@ -65,6 +83,8 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
       socket.off('private:read');
       socket.off('private:typing');
       socket.off('private:stopTyping');
+      socket.off('user:offline');
+      socket.off('user:list');
     };
   }, [socket, activeChat]);
 
@@ -117,6 +137,13 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
     }
   }, [e2eKeyPair, token, user]);
 
+  const getUserStatus = useCallback((username) => {
+    if (userStatuses[username]) return userStatuses[username];
+    const chat = chats.find((c) => c.otherUser === username);
+    if (chat) return { online: chat.otherUserOnline, lastSeen: chat.otherUserLastSeen };
+    return { online: false, lastSeen: null };
+  }, [userStatuses, chats]);
+
   return {
     chats,
     activeChat,
@@ -126,5 +153,6 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
     sendPrivateMessage,
     decryptMessage: decryptMessage_,
     typingUsers,
+    getUserStatus,
   };
 }

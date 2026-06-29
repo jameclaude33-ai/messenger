@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function ChatList({ chats, activeChat, onSelect, username }) {
+export default function ChatList({ chats, activeChat, onSelect, username, getUserStatus }) {
   const [newChat, setNewChat] = useState('');
 
   const handleStartChat = (e) => {
@@ -29,18 +29,23 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
         {chats.length === 0 && !newChat.trim() && (
           <p style={styles.empty}>Нет чатов. Введите никнейм выше, чтобы начать.</p>
         )}
-        {chats.map((chat) => (
-          <div
-            key={chat.chatId}
-            style={{
-              ...styles.item,
-              background: activeChat === chat.otherUser ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
-            }}
-            onClick={() => onSelect(chat.otherUser)}
-          >
-            <div style={styles.avatar}>
-              {chat.otherUser[0].toUpperCase()}
-            </div>
+        {chats.map((chat) => {
+          const status = getUserStatus ? getUserStatus(chat.otherUser) : { online: chat.otherUserOnline };
+          return (
+            <div
+              key={chat.chatId}
+              style={{
+                ...styles.item,
+                background: activeChat === chat.otherUser ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+              }}
+              onClick={() => onSelect(chat.otherUser)}
+            >
+              <div style={styles.avatarWrap}>
+                <div style={styles.avatar}>
+                  {chat.otherUser[0].toUpperCase()}
+                </div>
+                {status.online && <div style={styles.onlineDot} />}
+              </div>
               <div style={styles.info}>
               <div style={styles.nameRow}>
                 <div style={styles.nameBlock}>
@@ -67,7 +72,8 @@ export default function ChatList({ chats, activeChat, onSelect, username }) {
               <span style={styles.badge}>{chat.unread}</span>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -125,6 +131,10 @@ const styles = {
     borderRadius: '12px',
     transition: 'background 0.15s',
   },
+  avatarWrap: {
+    position: 'relative',
+    flexShrink: 0,
+  },
   avatar: {
     width: '40px',
     height: '40px',
@@ -136,7 +146,16 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     color: '#ffffff',
-    flexShrink: 0,
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: '0',
+    right: '0',
+    width: '10px',
+    height: '10px',
+    borderRadius: '50%',
+    background: '#22c55e',
+    border: '2px solid #171c29',
   },
   info: {
     flex: 1,

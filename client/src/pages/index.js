@@ -22,6 +22,7 @@ export default function Home() {
     sendPrivateMessage,
     decryptMessage: decryptPrivateMessage,
     typingUsers: privateTypingUsers,
+    getUserStatus,
   } = usePrivateChats(socket, e2eKeyPair, e2eReady, token, user);
   const {
     callState,
@@ -105,7 +106,7 @@ export default function Home() {
 
   const sidebarContent = (
     <div style={styles.sidebarInner}>
-      <ChatList chats={chats} activeChat={activeChat} onSelect={handleOpenChat} username={user.username} />
+      <ChatList chats={chats} activeChat={activeChat} onSelect={handleOpenChat} username={user.username} getUserStatus={getUserStatus} />
     </div>
   );
 
@@ -124,6 +125,7 @@ export default function Home() {
           isTyping={Object.keys(privateTypingUsers).length > 0}
           onTyping={() => socket?.emit('private:typing', { to: activeChat })}
           onStopTyping={() => socket?.emit('private:stopTyping', { to: activeChat })}
+          userStatus={getUserStatus(activeChat)}
         />
       );
     }

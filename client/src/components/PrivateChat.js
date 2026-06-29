@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import TypingIndicator from './TypingIndicator';
 
-export default function PrivateChat({ messages, username, onSend, onBack, otherUser, otherUserDisplayName, decryptMessage, isTyping, onTyping, onStopTyping }) {
+export default function PrivateChat({ messages, username, onSend, onBack, otherUser, otherUserDisplayName, decryptMessage, isTyping, onTyping, onStopTyping, userStatus }) {
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const listRef = useRef(null);
@@ -43,6 +43,28 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
     }
   };
 
+  const formatLastSeen = (lastSeen) => {
+    if (!lastSeen) return '';
+    const now = new Date();
+    const date = new Date(lastSeen);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'только что';
+    if (diffMins < 60) return `${diffMins} мин. назад`;
+    if (diffHours < 24) return `${diffHours} ч. назад`;
+    if (diffDays === 1) return 'вчера';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  };
+
+  const statusText = userStatus?.online
+    ? 'в сети'
+    : userStatus?.lastSeen
+      ? `был(а) ${formatLastSeen(userStatus.lastSeen)}`
+      : 'не в сети';
+
   const handleChange = (e) => {
     const val = e.target.value;
     setText(val);
@@ -60,7 +82,9 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
         <div style={styles.avatar}>{otherUser[0].toUpperCase()}</div>
         <div>
           <div style={styles.name}>{otherUserDisplayName || otherUser}</div>
-          <div style={styles.tag}>@{otherUser}</div>
+          <div style={{ ...styles.status, color: userStatus?.online ? '#22c55e' : '#70798a' }}>
+            {statusText}
+          </div>
           <div style={styles.e2e}>🔒 E2E</div>
         </div>
       </div>
@@ -148,6 +172,9 @@ const styles = {
   tag: {
     color: '#70798a',
     fontSize: '11px',
+  },
+  status: {
+    fontSize: '12px',
   },
   e2e: {
     color: '#22c55e',

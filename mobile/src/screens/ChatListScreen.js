@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 
-export default function ChatListScreen({ chats, username, onSelectChat, onLogout }) {
+export default function ChatListScreen({ chats, username, onSelectChat, onLogout, getUserStatus }) {
   const [newChat, setNewChat] = useState('');
 
   const handleStartChat = () => {
@@ -19,10 +19,15 @@ export default function ChatListScreen({ chats, username, onSelectChat, onLogout
     }
   };
 
-  const renderChat = ({ item }) => (
+  const renderChat = ({ item }) => {
+    const status = getUserStatus ? getUserStatus(item.otherUser) : { online: item.otherUserOnline };
+    return (
     <TouchableOpacity style={styles.chatItem} onPress={() => onSelectChat(item.otherUser)}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{item.otherUser[0].toUpperCase()}</Text>
+      <View style={styles.avatarWrap}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{item.otherUser[0].toUpperCase()}</Text>
+        </View>
+        {status.online && <View style={styles.onlineDot} />}
       </View>
       <View style={styles.chatInfo}>
         <View style={styles.nameRow}>
@@ -52,7 +57,8 @@ export default function ChatListScreen({ chats, username, onSelectChat, onLogout
         </View>
       )}
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -162,6 +168,9 @@ const styles = StyleSheet.create({
     gap: 12,
     borderRadius: 12,
   },
+  avatarWrap: {
+    position: 'relative',
+  },
   avatar: {
     width: 44,
     height: 44,
@@ -169,6 +178,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#3390ec',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#22c55e',
+    borderWidth: 2,
+    borderColor: '#0f0f0f',
   },
   avatarText: {
     color: '#fff',

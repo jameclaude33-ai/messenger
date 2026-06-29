@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 
-export default function PrivateChatScreen({ messages, username, otherUser, otherUserDisplayName, onSend, onBack, decryptMessage, isTyping, onTyping, onStopTyping }) {
+export default function PrivateChatScreen({ messages, username, otherUser, otherUserDisplayName, onSend, onBack, decryptMessage, isTyping, onTyping, onStopTyping, userStatus }) {
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const flatListRef = useRef(null);
@@ -37,6 +37,28 @@ export default function PrivateChatScreen({ messages, username, otherUser, other
   const handleTyping = useCallback(() => {
     if (onTyping) onTyping();
   }, [onTyping]);
+
+  const formatLastSeen = (lastSeen) => {
+    if (!lastSeen) return '';
+    const now = new Date();
+    const date = new Date(lastSeen);
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'только что';
+    if (diffMins < 60) return `${diffMins} мин. назад`;
+    if (diffHours < 24) return `${diffHours} ч. назад`;
+    if (diffDays === 1) return 'вчера';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  };
+
+  const statusText = userStatus?.online
+    ? 'в сети'
+    : userStatus?.lastSeen
+      ? `был(а) ${formatLastSeen(userStatus.lastSeen)}`
+      : 'не в сети';
 
   const handleSend = () => {
     if (!text.trim()) return;
@@ -91,7 +113,9 @@ export default function PrivateChatScreen({ messages, username, otherUser, other
         </View>
         <View style={styles.headerInfo}>
           <Text style={styles.headerName}>{otherUserDisplayName || otherUser}</Text>
-          <Text style={styles.headerTag}>@{otherUser}</Text>
+          <Text style={[styles.headerStatus, { color: userStatus?.online ? '#22c55e' : '#70798a' }]}>
+            {statusText}
+          </Text>
           <Text style={styles.e2e}>🔒 E2E</Text>
         </View>
       </View>
@@ -176,6 +200,9 @@ const styles = StyleSheet.create({
   headerTag: {
     color: '#70798a',
     fontSize: 11,
+  },
+  headerStatus: {
+    fontSize: 12,
   },
   e2e: {
     color: '#22c55e',
