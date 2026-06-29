@@ -68,11 +68,20 @@ async function register(username, password, email, displayName) {
 
 async function login(usernameOrEmail, password) {
   let user;
-  if (usernameOrEmail.includes('@')) {
-    const username = emailToUsername.get(usernameOrEmail.toLowerCase());
+  const input = usernameOrEmail.replace('@', '');
+  if (input.includes('@')) {
+    const username = emailToUsername.get(input.toLowerCase());
     if (username) user = users.get(username);
   } else {
-    user = users.get(usernameOrEmail);
+    user = users.get(input);
+    if (!user) {
+      for (const u of users.values()) {
+        if (u.displayName && u.displayName.toLowerCase() === input.toLowerCase()) {
+          user = u;
+          break;
+        }
+      }
+    }
   }
   if (!user) {
     throw new Error('Invalid credentials');
