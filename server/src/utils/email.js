@@ -27,29 +27,8 @@ function buildHtml(code) {
   `;
 }
 
-async function sendViaResend(email, code) {
-  if (!RESEND_API_KEY) return null;
-  try {
-    const resend = new Resend(RESEND_API_KEY);
-    const result = await resend.emails.send({
-      from: 'Messenger <onboarding@resend.dev>',
-      to: email,
-      subject: 'Код подтверждения — Messenger',
-      html: buildHtml(code),
-    });
-    if (result.error) {
-      console.error('[Resend] Error:', JSON.stringify(result.error));
-      return null;
-    }
-    return { ok: true };
-  } catch (err) {
-    console.error('[Resend] Exception:', err.message);
-    return null;
-  }
-}
-
 async function sendViaSmtp(email, code) {
-  if (!SMTP_HOST || !SMTP_USER) return null;
+  if (!SMTP_HOST || !SMTP_USER) return false;
   try {
     const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
@@ -63,10 +42,31 @@ async function sendViaSmtp(email, code) {
       subject: 'Код подтверждения — Messenger',
       html: buildHtml(code),
     });
-    return { ok: true };
+    return true;
   } catch (err) {
     console.error('[SMTP] Failed:', err.message);
-    return null;
+    return false;
+  }
+}
+
+async function sendViaResend(email, code) {
+  if (!RESEND_API_KEY) return false;
+  try {
+    const resend = new Resend(RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from: 'Messenger <onboarding@resend.dev>',
+      to: email,
+      subject: 'Код подтверждения — Messenger',
+      html: buildHtml(code),
+    });
+    if (error) {
+      console.error('[Resend] Error:', error.message || JSON.stringify(error));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[Resend] Exception:', err.message);
+    return false;
   }
 }
 
@@ -75,30 +75,18 @@ async function sendVerificationCode(email) {
   const expiresAt = Date.now() + 10 * 60 * 1000;
   codes.set(email.toLowerCase(), { code, expiresAt, attempts: 0 });
 
+  // Try sending via available providers
   let sent = false;
-  try {
-    const result = await sendViaResend(email, code);
-    if (result) sent = true;
-  } catch (e) {
-    console.error('[Resend] Exception in sendVerificationCode:', e.message);
-  }
-
-  if (!sent) {
-    try {
-      const result = await sendViaSmtp(email, code);
-      if (result) sent = true;
-    } catch (e) {
-      console.error('[SMTP] Exception in sendVerificationCode:', e.message);
-    }
-  }
+  try { sent = await sendViaResend(email, code); } catch (e) { /* ignore */ }
+  if (!sent) try { sent = await sendViaSmtp(email, code); } catch (e) { /* ignore */ }
 
   if (sent) {
     console.log(`[Email] Code sent to ${email}`);
     return { ok: true };
   }
 
-  // Dev fallback — log code to console and return to client
-  console.log(`[DEV] Verification code for ${email}: ${code}`);
+  // Dev fallback
+  console.log(`[DEV] Code for ${email}: ${code}`);
   return { ok: true, devCode: code };
 }
 
