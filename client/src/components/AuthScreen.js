@@ -20,6 +20,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
+  const [devCode, setDevCode] = useState('');
   const codeRefs = useRef([]);
 
   const triggerShake = () => {
@@ -43,6 +44,7 @@ export default function AuthScreen({ onLogin, onRegister }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      if (data.devCode) setDevCode(data.devCode);
       setStep(2);
       setTimeout(() => codeRefs.current[0]?.focus(), 100);
     } catch (err) {
@@ -297,6 +299,11 @@ export default function AuthScreen({ onLogin, onRegister }) {
                 />
               ))}
             </div>
+            {devCode && (
+              <div style={styles.devCode}>
+                DEV: код <strong>{devCode}</strong>
+              </div>
+            )}
             {error && <p style={styles.error}>{error}</p>}
             <p style={styles.hint}>Введите 6-значный код из письма</p>
             <div style={styles.centerLink}>
