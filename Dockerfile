@@ -6,6 +6,7 @@ COPY package*.json ./
 COPY server/package*.json ./server/
 COPY client/package*.json ./client/
 
+# Cache bust: 2026-06-29-17:15 - removed resend, brevo, ws deps
 RUN npm install && cd server && npm install && cd ../client && npm install
 
 COPY . .
