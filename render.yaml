@@ -12,8 +12,6 @@ services:
         generateValue: true
       - key: ENCRYPTION_KEY
         generateValue: true
-      - key: RESEND_API_KEY
-        value: re_GmjjZNDq_JRcmAmEnro4crgUKbyGBJNZc
       - key: SUPABASE_URL
         value: https://rtwbihaputyimjxrdlxi.supabase.co
       - key: SUPABASE_ANON_KEY
