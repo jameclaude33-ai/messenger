@@ -1,4 +1,4 @@
-const API_URL = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
 
 function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);

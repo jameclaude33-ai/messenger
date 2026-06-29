@@ -1,9 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import TypingIndicator from './TypingIndicator';
 
-export default function PrivateChat({ messages, username, onSend, onBack, otherUser, decryptMessage }) {
+export default function PrivateChat({ messages, username, onSend, onBack, otherUser, decryptMessage, isTyping, onTyping, onStopTyping }) {
   const [text, setText] = useState('');
   const [decryptedMessages, setDecryptedMessages] = useState([]);
   const listRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!decryptMessage || !messages.length) {
@@ -24,8 +26,20 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
     }
   }, [decryptedMessages]);
 
+  const handleTyping = useCallback(() => {
+    if (onTyping) onTyping();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (onStopTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        onStopTyping();
+      }, 2000);
+    }
+  }, [onTyping, onStopTyping]);
+
   const handleSend = () => {
     if (!text.trim()) return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (onStopTyping) onStopTyping();
     onSend(text);
     setText('');
   };
@@ -35,6 +49,11 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const handleChange = (e) => {
+    setText(e.target.value);
+    handleTyping();
   };
 
   return (
@@ -57,19 +76,27 @@ export default function PrivateChat({ messages, username, onSend, onBack, otherU
           return (
             <div key={msg.id} style={{ ...styles.bubble, alignSelf: isOwn ? 'flex-end' : 'flex-start', background: isOwn ? '#4f46e5' : '#1a1a1a' }}>
               <p style={styles.text}>{msg.text}</p>
-              <span style={styles.time}>
-                {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-              </span>
+              <div style={styles.msgInfo}>
+                <span style={styles.time}>
+                  {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                {isOwn && (
+                  <span style={{ ...styles.ticks, color: msg.read ? '#53a6f3' : 'rgba(255,255,255,0.4)' }}>
+                    {msg.read ? '✓✓' : '✓'}
+                  </span>
+                )}
+              </div>
             </div>
           );
         })}
+        {isTyping && <TypingIndicator typingUsers={[otherUser]} currentUsername={username} />}
       </div>
 
       <div style={styles.inputArea}>
         <input
           style={styles.input}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder="Сообщение..."
         />
@@ -151,12 +178,20 @@ const styles = {
     lineHeight: '20px',
     wordBreak: 'break-word',
   },
+  msgInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '4px',
+    marginTop: '4px',
+  },
   time: {
     color: '#888',
     fontSize: '10px',
-    display: 'block',
-    textAlign: 'right',
-    marginTop: '4px',
+  },
+  ticks: {
+    fontSize: '12px',
+    letterSpacing: '-2px',
   },
   inputArea: {
     display: 'flex',

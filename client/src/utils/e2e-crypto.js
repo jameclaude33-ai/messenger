@@ -1,11 +1,4 @@
-const getApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'http://localhost:3001';
-};
-
-const API_URL = getApiUrl();
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
 
 const EC_PARAMS = { name: 'ECDH', namedCurve: 'P-256' };
 const AES_PARAMS = { name: 'AES-GCM', length: 256 };

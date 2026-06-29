@@ -5,6 +5,7 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [typingUsers, setTypingUsers] = useState({});
 
   useEffect(() => {
     if (!socket) return;
@@ -35,18 +36,42 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
       setMessages(history);
     });
 
+    socket.on('private:read', (data) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          data.messageIds.includes(m.id) ? { ...m, read: true } : m
+        )
+      );
+    });
+
+    socket.on('private:typing', (data) => {
+      setTypingUsers((prev) => ({ ...prev, [data.from]: true }));
+    });
+
+    socket.on('private:stopTyping', (data) => {
+      setTypingUsers((prev) => {
+        const next = { ...prev };
+        delete next[data.from];
+        return next;
+      });
+    });
+
     socket.emit('private:chats');
 
     return () => {
       socket.off('private:chats');
       socket.off('private:message');
       socket.off('private:history');
+      socket.off('private:read');
+      socket.off('private:typing');
+      socket.off('private:stopTyping');
     };
   }, [socket, activeChat]);
 
   const openChat = useCallback((username) => {
     setActiveChat(username);
     setMessages([]);
+    setTypingUsers({});
     if (socket) {
       socket.emit('private:history', { with: username });
     }
@@ -99,5 +124,6 @@ export function usePrivateChats(socket, e2eKeyPair, e2eReady, token, user) {
     closeChat,
     sendPrivateMessage,
     decryptMessage: decryptMessage_,
+    typingUsers,
   };
 }

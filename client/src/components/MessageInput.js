@@ -1,20 +1,38 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import FileUpload from './FileUpload';
 
-export default function MessageInput({ onSend, onFileUpload, userId }) {
+export default function MessageInput({ onSend, onFileUpload, userId, onTyping, onStopTyping }) {
   const [text, setText] = useState('');
   const inputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  const handleTyping = useCallback(() => {
+    if (onTyping) onTyping();
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (onStopTyping) {
+      typingTimeoutRef.current = setTimeout(() => {
+        onStopTyping();
+      }, 2000);
+    }
+  }, [onTyping, onStopTyping]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (text.trim()) {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      if (onStopTyping) onStopTyping();
       onSend(text.trim());
       setText('');
     }
+  };
+
+  const handleChange = (e) => {
+    setText(e.target.value);
+    handleTyping();
   };
 
   const handleKeyDown = (e) => {
@@ -39,7 +57,7 @@ export default function MessageInput({ onSend, onFileUpload, userId }) {
         ref={inputRef}
         type="text"
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder="Написать сообщение..."
         style={styles.input}

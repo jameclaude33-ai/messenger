@@ -10,15 +10,8 @@ import {
 } from '../utils/e2e-crypto';
 import { subscribeToPush, requestNotificationPermission } from '../utils/push';
 
-const getBaseUrl = () => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin;
-  }
-  return 'http://localhost:3001';
-};
-
-const SOCKET_URL = getBaseUrl();
-const API_URL = getBaseUrl();
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
+const API_URL = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001');
 
 export function useAuth() {
   const [user, setUser] = useState(null);
@@ -151,6 +144,7 @@ export function useChat(socket, e2eKeyPair, e2eReady, user) {
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
   const [joined, setJoined] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
 
   const decryptMsg = useCallback(async (msg) => {
     if (!msg.encrypted || !e2eKeyPair) return msg;
@@ -195,11 +189,19 @@ export function useChat(socket, e2eKeyPair, e2eReady, user) {
     socket.on('message:new', handleNewMessage);
     socket.on('message:history', handleHistory);
     socket.on('user:list', (userList) => setUsers(userList));
+    socket.on('user:typing', (username) => {
+      setTypingUsers((prev) => prev.includes(username) ? prev : [...prev, username]);
+    });
+    socket.on('user:stopTyping', (username) => {
+      setTypingUsers((prev) => prev.filter((u) => u !== username));
+    });
 
     return () => {
       socket.off('message:new', handleNewMessage);
       socket.off('message:history', handleHistory);
       socket.off('user:list');
+      socket.off('user:typing');
+      socket.off('user:stopTyping');
     };
   }, [socket, e2eKeyPair, decryptMsg]);
 
@@ -231,7 +233,7 @@ export function useChat(socket, e2eKeyPair, e2eReady, user) {
     });
   };
 
-  return { messages, users, joined, join, sendMessage, sendFileMessage };
+  return { messages, users, joined, join, sendMessage, sendFileMessage, typingUsers };
 }
 
 export function useGroups(socket) {

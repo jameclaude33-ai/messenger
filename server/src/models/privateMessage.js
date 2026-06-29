@@ -63,9 +63,14 @@ function getChatsForUser(username) {
 function markAsRead(user1, user2, username) {
   const chatId = getChatId(user1, user2);
   const messages = privateMessages.get(chatId) || [];
+  const readIds = [];
   messages.forEach(m => {
-    if (m.to === username) m.read = true;
+    if (m.to === username && !m.read) {
+      m.read = true;
+      readIds.push(m.id);
+    }
   });
+  return readIds;
 }
 
 module.exports = { savePrivateMessage, getPrivateMessages, getChatsForUser, markAsRead, getChatId };

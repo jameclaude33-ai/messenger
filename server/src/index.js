@@ -128,7 +128,15 @@ io.on('connection', (socket) => {
     if (!username || !data.with) return;
     const messages = privateMsg.getPrivateMessages(username, data.with);
     socket.emit('private:history', messages);
-    privateMsg.markAsRead(data.with, username, username);
+    const readIds = privateMsg.markAsRead(data.with, username, username);
+    if (readIds.length > 0) {
+      const targetSockets = userSockets.get(data.with);
+      if (targetSockets) {
+        targetSockets.forEach((sid) => {
+          io.to(sid).emit('private:read', { by: username, messageIds: readIds });
+        });
+      }
+    }
   });
 
   socket.on('private:chats', () => {
@@ -192,6 +200,28 @@ io.on('connection', (socket) => {
     const user = users.get(socketToUser.get(socket.id));
     if (!user) return;
     socket.broadcast.emit('user:stopTyping', user.username);
+  });
+
+  socket.on('private:typing', (data) => {
+    const sender = socketToUser.get(socket.id);
+    if (!sender || !data.to) return;
+    const targetSockets = userSockets.get(data.to);
+    if (targetSockets) {
+      targetSockets.forEach((sid) => {
+        io.to(sid).emit('private:typing', { from: sender });
+      });
+    }
+  });
+
+  socket.on('private:stopTyping', (data) => {
+    const sender = socketToUser.get(socket.id);
+    if (!sender || !data.to) return;
+    const targetSockets = userSockets.get(data.to);
+    if (targetSockets) {
+      targetSockets.forEach((sid) => {
+        io.to(sid).emit('private:stopTyping', { from: sender });
+      });
+    }
   });
 
   socket.on('group:create', (name) => {

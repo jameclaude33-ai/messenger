@@ -10,6 +10,7 @@ import PrivateChat from '../components/PrivateChat';
 import GroupChat from '../components/GroupChat';
 import MessageList from '../components/MessageList';
 import MessageInput from '../components/MessageInput';
+import TypingIndicator from '../components/TypingIndicator';
 import CallModal from '../components/CallModal';
 import { useState, useEffect, useCallback } from 'react';
 
@@ -17,7 +18,7 @@ export default function Home() {
   const { user, token, loading, register, login, logout } = useAuth();
   const { socket, connected } = useSocket(token);
   const { keyPair: e2eKeyPair, ready: e2eReady } = useE2E(socket, token);
-  const { messages, users, joined, join, sendMessage, sendFileMessage } = useChat(socket, e2eKeyPair, e2eReady, user);
+  const { messages, users, joined, join, sendMessage, sendFileMessage, typingUsers } = useChat(socket, e2eKeyPair, e2eReady, user);
   const {
     groups,
     activeGroupId,
@@ -37,6 +38,7 @@ export default function Home() {
     closeChat,
     sendPrivateMessage,
     decryptMessage: decryptPrivateMessage,
+    typingUsers: privateTypingUsers,
   } = usePrivateChats(socket, e2eKeyPair, e2eReady, token, user);
   const {
     callState,
@@ -182,6 +184,9 @@ export default function Home() {
           onSend={sendPrivateMessage}
           onBack={closeChat}
           decryptMessage={decryptPrivateMessage}
+          isTyping={Object.keys(privateTypingUsers).length > 0}
+          onTyping={() => socket?.emit('private:typing', { to: activeChat })}
+          onStopTyping={() => socket?.emit('private:stopTyping', { to: activeChat })}
         />
       );
     }
@@ -200,7 +205,14 @@ export default function Home() {
     return (
       <>
         <MessageList messages={messages} username={user.username} />
-        <MessageInput onSend={sendMessage} onFileUpload={sendFileMessage} userId={user.username} />
+        <TypingIndicator typingUsers={typingUsers} currentUsername={user.username} />
+        <MessageInput
+          onSend={sendMessage}
+          onFileUpload={sendFileMessage}
+          userId={user.username}
+          onTyping={() => socket?.emit('user:typing')}
+          onStopTyping={() => socket?.emit('user:stopTyping')}
+        />
       </>
     );
   };
