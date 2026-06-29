@@ -53,10 +53,11 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    let { username, password } = req.body;
     if (!username || !password) {
       return res.status(400).json({ error: 'Заполните все поля' });
     }
+    username = username.replace('@', '');
     const user = await login(username, password);
     const token = generateToken(user);
     res.json({ user, token });
